@@ -1,0 +1,21 @@
+[package]
+name = "yew-nested-router"
+description = "A router for Yew which supports nesting"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/ctron/yew-nested-router"
+categories = ["wasm", "web-programming", "gui"]
+keywords = ["yew", "router", "nested", "web", "html"]
+readme = "README.md"
+
+[dependencies]
+gloo-history = "0.1.2"
+gloo-utils = "0.1.6"
+log = "0.4"
+yew = "0.20"
+
+web-sys = { version = "0.3", features = [
+    "Navigator"
+] }

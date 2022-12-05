@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use yew::prelude::*;
+use yew_nested_router::components::*;
 use yew_nested_router::prelude::*;
 
 use crate::components::*;
@@ -76,7 +77,14 @@ fn switch(page: Page) -> Html {
                 </Section>
             </Nested<B>>
         ),
-        Page::C(value) => html!(<Section>{ format!("C ({value})") }</Section>),
+        Page::C(value) => html!(<Section>
+            <div>
+                { format!("C ({value})") }
+            </div>
+            <nav>
+                <Link<Page> target={Page::B(B::Two)}>{ "Jump to Page::B(B::Two)" }</Link<Page>>
+            </nav>
+        </Section>),
     }
 }
 

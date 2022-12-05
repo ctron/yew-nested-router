@@ -15,6 +15,15 @@ The following things have to be done before a release makes sense:
 * [ ] Think about handling state, currently this only handles the path. The History API however can do more.
 * [ ] Probably some more, feel free to raise issues.
 
+## Goals and opinions
+
+This is not a drop-in replacement for the old Yew router. This section briefly describes which choices this implementation made:
+
+* The router supports a nested structured, where the child elements don't need to be aware of their parents.
+  This is required in many cases, where one want to re-use lower level routes on different top level routes.
+* Routes are not but regular expressions or other pattern matching, but by simply splitting the path of a URL using the forward slash (`/`) into segments.
+* The implementation should try to help avoiding mistakes by using Rust's type system. But it won't fully guard against all mistakes which can be made. 
+
 ## Example
 
 Also see a complete example: [examples/yew-nested-router-example](examples/yew-nested-router-example), which

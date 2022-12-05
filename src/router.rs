@@ -1,4 +1,4 @@
-use crate::nested::{NavigationContext, Request};
+use crate::navigation::{NavigationContext, Request};
 use crate::switch::SwitchContext;
 use crate::target::Target;
 use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
@@ -14,17 +14,21 @@ pub struct RouterContext<S: Target> {
 
 impl<T> RouterContext<T> where T: Target {}
 
+/// Properties for the [`Router`] component.
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct RouterProps {
+    /// The content to render.
     pub children: Children,
 }
 
 #[derive(Debug)]
+#[doc(hidden)]
 pub enum Msg {
     RouteChanged(Location),
     ChangeRoute(Request),
 }
 
+/// Top-level router component.
 pub struct Router<T: Target> {
     history: AnyHistory,
     _listener: HistoryListener,
@@ -128,6 +132,7 @@ impl<T: Target> Router<T> {
     }
 }
 
+/// Get the [`RouterContext`]. Can only be used beneath a [`Router`] component.
 #[hook]
 pub fn use_router<S>() -> Option<RouterContext<S>>
 where

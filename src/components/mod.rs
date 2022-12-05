@@ -1,3 +1,5 @@
+//! Some out-of-the box components.
+
 mod active;
 mod link;
 

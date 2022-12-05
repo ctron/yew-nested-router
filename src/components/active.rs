@@ -11,40 +11,36 @@ pub struct ActiveProps<T: Target> {
     #[prop_or_else(default::element)]
     pub element: String,
 
-    #[prop_or_else(default::class)]
+    #[prop_or_default]
     pub class: Classes,
 
     #[prop_or_default]
-    pub inactive_class: Classes,
+    pub active: Classes,
+
+    #[prop_or_default]
+    pub inactive: Classes,
 }
 
 mod default {
-    use yew::Classes;
-
     pub fn element() -> String {
         "span".to_string()
     }
-
-    pub fn class() -> Classes {
-        Classes::from("active")
-    }
 }
 
+/// A style element, allowing to add cass classes based on the target's active state.
 #[function_component(Active)]
 pub fn active<T>(props: &ActiveProps<T>) -> Html
 where
     T: Target,
 {
-    let switch = use_switch();
-    let active = switch
-        .map(|s| s.is_active(&props.target))
-        .unwrap_or_default();
+    let switch = use_switch().expect("Need Router or Nested component");
 
-    let class = match active {
-        true => &props.class,
-        false => &props.inactive_class,
+    let mut class = props.class.clone();
+
+    match switch.is_active(&props.target) {
+        true => class.extend(props.active.clone()),
+        false => class.extend(props.inactive.clone()),
     }
-    .clone();
 
     html!(
         <@{props.element.clone()} {class}>

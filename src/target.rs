@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+/// A target for used by a router.
 pub trait Target: Clone + Debug + PartialEq + 'static {
     fn render_path(&self) -> Vec<String>;
 

@@ -1,4 +1,4 @@
-use crate::nested::NavigationContext;
+use crate::navigation::NavigationContext;
 use crate::target::Target;
 use std::fmt::Debug;
 use yew::prelude::*;
@@ -61,7 +61,7 @@ where
         {
             match s.target {
                 Some(target) => props.switch.emit(target),
-                None => props.default.emit(()),
+                None => props.default.clone(),
             }
         }
     </>)

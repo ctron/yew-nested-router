@@ -3,16 +3,7 @@ use crate::switch::SwitchContext;
 use crate::target::Target;
 use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
 use std::fmt::Debug;
-use std::marker::PhantomData;
 use yew::prelude::*;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct RouterContext<S: Target> {
-    _marker: PhantomData<S>,
-    history: AnyHistory,
-}
-
-impl<T> RouterContext<T> where T: Target {}
 
 /// Properties for the [`Router`] component.
 #[derive(Clone, Debug, PartialEq, Properties)]
@@ -32,7 +23,6 @@ pub enum Msg {
 pub struct Router<T: Target> {
     history: AnyHistory,
     _listener: HistoryListener,
-    context: RouterContext<T>,
     target: Option<T>,
 }
 
@@ -45,11 +35,6 @@ where
 
     fn create(ctx: &Context<Self>) -> Self {
         let history = AnyHistory::Browser(BrowserHistory::new());
-
-        let context = RouterContext {
-            _marker: Default::default(),
-            history: history.clone(),
-        };
 
         let cb = ctx.link().callback(Msg::RouteChanged);
 
@@ -65,7 +50,6 @@ where
         Self {
             history,
             _listener: listener,
-            context,
             target,
         }
     }
@@ -92,8 +76,6 @@ where
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let context = self.context.clone();
-
         let base = self
             .target
             .as_ref()
@@ -111,13 +93,11 @@ where
         };
 
         html! (
-            <ContextProvider<RouterContext<S>> {context}>
-                <ContextProvider<NavigationContext> context={navigation}>
-                    <ContextProvider<SwitchContext<S>> context={switch}>
-                        { for ctx.props().children.iter() }
-                    </ContextProvider<SwitchContext<S>>>
-                </ContextProvider<NavigationContext>>
-            </ContextProvider<RouterContext<S>>>
+            <ContextProvider<NavigationContext> context={navigation}>
+                <ContextProvider<SwitchContext<S>> context={switch}>
+                    { for ctx.props().children.iter() }
+                </ContextProvider<SwitchContext<S>>>
+            </ContextProvider<NavigationContext>>
         )
     }
 }
@@ -130,13 +110,4 @@ impl<T: Target> Router<T> {
         log::debug!("New target: {target:?}");
         target
     }
-}
-
-/// Get the [`RouterContext`]. Can only be used beneath a [`Router`] component.
-#[hook]
-pub fn use_router<S>() -> Option<RouterContext<S>>
-where
-    S: Target + 'static,
-{
-    use_context::<RouterContext<S>>()
 }

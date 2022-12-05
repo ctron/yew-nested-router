@@ -860,7 +860,7 @@ dependencies = [
 
 [[package]]
 name = "yew-nested-router"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "gloo-history",
  "gloo-utils",
@@ -883,7 +883,7 @@ dependencies = [
 
 [[package]]
 name = "yew-nested-router-macros"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "darling",
  "proc-macro2",

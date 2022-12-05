@@ -1,3 +1,5 @@
+//! Routing target
+
 use std::fmt::Debug;
 
 /// A target for used by a router.

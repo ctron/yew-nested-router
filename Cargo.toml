@@ -16,6 +16,8 @@ gloo-utils = "0.1.6"
 log = "0.4"
 yew = "0.20"
 
+yew-nested-router-macros = { path = "yew-nested-router-macros" }
+
 web-sys = { version = "0.3", features = [
     "Navigator"
 ] }

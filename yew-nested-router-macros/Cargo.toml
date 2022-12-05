@@ -1,0 +1,19 @@
+[package]
+name = "yew-nested-router-macros"
+description = "Macro support for yew-nested-router"
+version = "0.1.0"
+edition = "2021"
+authors = ["Jens Reimann <jreimann@redhat.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/ctron/yew-nested-router"
+categories = ["wasm", "web-programming", "gui"]
+keywords = ["yew", "router", "nested", "web", "html"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["full"] }
+darling = "0.14"

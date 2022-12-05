@@ -1,17 +1,17 @@
 //! A router for Yew, supporting nesting.
 
 pub mod components;
+pub mod target;
 
 mod navigation;
 mod nested;
 mod router;
 mod switch;
-mod target;
 
 pub use nested::Nested;
 pub use router::Router;
 pub use switch::Switch;
-pub use target::Target;
+pub use yew_nested_router_macros::Target;
 
 /// Common includes.
 pub mod prelude {

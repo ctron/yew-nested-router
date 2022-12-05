@@ -1,5 +1,5 @@
 use crate::navigation::{NavigationContext, Request};
-use crate::switch::SwitchContext;
+use crate::router::RouterContext;
 use crate::target::Target;
 use yew::prelude::*;
 
@@ -24,16 +24,16 @@ where
         }),
     };
 
-    let context = SwitchContext {
+    let context = RouterContext {
         navigation: navigation.clone(),
-        target: Some(props.target.clone()),
+        active_target: Some(props.target.clone()),
     };
 
     html!(
-        <ContextProvider<SwitchContext<T>> {context}>
+        <ContextProvider<RouterContext<T>> {context}>
             <ContextProvider<NavigationContext> context={navigation}>
                 { for props.children.iter() }
             </ContextProvider<NavigationContext>>
-        </ContextProvider<SwitchContext<T>>>
+        </ContextProvider<RouterContext<T>>>
     )
 }

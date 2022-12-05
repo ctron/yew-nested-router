@@ -1,9 +1,12 @@
 use crate::prelude::Target;
-use crate::switch::use_switch;
+use crate::router::use_router;
 use yew::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, Properties)]
-pub struct ActiveProps<T: Target> {
+pub struct ActiveProps<T>
+where
+    T: Target,
+{
     pub target: T,
 
     pub children: Children,
@@ -33,11 +36,11 @@ pub fn active<T>(props: &ActiveProps<T>) -> Html
 where
     T: Target,
 {
-    let switch = use_switch().expect("Need Router or Nested component");
+    let router = use_router().expect("Need Router or Nested component");
 
     let mut class = props.class.clone();
 
-    match switch.is_active(&props.target) {
+    match router.is_active(&props.target) {
         true => class.extend(props.active.clone()),
         false => class.extend(props.inactive.clone()),
     }

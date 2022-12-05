@@ -5,7 +5,7 @@ use yew_nested_router::prelude::*;
 
 use crate::components::*;
 
-fn switch(page: Page) -> Html {
+fn render(page: Page) -> Html {
     match page {
         Page::A => html!(<Section>{ "A" }</Section>),
         Page::B(target) => html!(
@@ -20,7 +20,7 @@ fn switch(page: Page) -> Html {
                             <li><Link<B> active="active" target={B::Three}>{ "Three" }</Link<B>></li>
                         </ul>
                     </nav>
-                    <Switch<B> switch={switch_b} />
+                    <Switch<B> render={render_b} />
                 </Section>
             </Nested<B>>
         ),
@@ -35,7 +35,7 @@ fn switch(page: Page) -> Html {
     }
 }
 
-fn switch_b(b: B) -> Html {
+fn render_b(b: B) -> Html {
     match b {
         B::One => html!(<Section>{"One"}</Section>),
         B::Two => html!(<Section>{"Two"}</Section>),
@@ -61,7 +61,7 @@ pub fn app() -> Html {
             
             <main>
                 <div>
-                    <Switch<Page> {switch} default={html!(<>{"Not found"}</>)}/>
+                    <Switch<Page> {render} default={html!(<>{"Not found"}</>)}/>
                 </div>
             </main>
         

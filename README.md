@@ -10,7 +10,7 @@ Compared to [ctron/yew-router](https://github.com/ctron/yew-router) (which is a 
 
 The following things have to be done before a release makes sense:
 
-* [ ] Allow using path variables (like `/application/{applications}/device/{device}/settings`).
+* [x] Allow using path variables (like `/application/{applications}/device/{device}/settings`).
 * [ ] Simplify the enum definition using either a `derive`, or macro.
 * [ ] Think about handling state, currently this only handles the path. The History API however can do more.
 * [ ] Probably some more, feel free to raise issues.

@@ -8,7 +8,7 @@ use crate::components::*;
 pub enum Page {
     A,
     B(B),
-    C,
+    C(String),
 }
 
 impl Target for Page {
@@ -16,7 +16,7 @@ impl Target for Page {
         match self {
             Self::A => vec!["a".into()],
             Self::B(_) => vec!["b".into()],
-            Self::C => vec!["c".into()],
+            Self::C(value) => vec!["c".into(), value.clone()],
         }
     }
 
@@ -25,7 +25,7 @@ impl Target for Page {
             ["a"] => Some(Self::A),
             ["b"] => Some(Self::B(B::One)),
             ["b", rest @ ..] => B::parse_path(rest).map(Self::B),
-            ["c"] => Some(Self::C),
+            ["c", value] => Some(Self::C(value.to_string())),
             _ => None,
         }
     }
@@ -66,6 +66,7 @@ fn switch(page: Page) -> Html {
                     { "B" }
                     <nav>
                         <ul>
+                            <li><Link<Page> target={Page::A}>{ "Home (A)" }</Link<Page>></li>
                             <li><Link<B> active="active" target={B::One}>{ "One" }</Link<B>></li>
                             <li><Link<B> active="active" target={B::Two}>{ "Two" }</Link<B>></li>
                             <li><Link<B> active="active" target={B::Three}>{ "Three" }</Link<B>></li>
@@ -75,7 +76,7 @@ fn switch(page: Page) -> Html {
                 </Section>
             </Nested<B>>
         ),
-        Page::C => html!(<Section>{ "C" }</Section>),
+        Page::C(value) => html!(<Section>{ format!("C ({value})") }</Section>),
     }
 }
 
@@ -98,14 +99,14 @@ pub fn app() -> Html {
                     <ul> 
                         <li><Link<Page> active="active" target={Page::A}>{ "A" }</Link<Page>></li>
                         <li><Link<Page> active="active" target={Page::B(B::One)}>{ "B" }</Link<Page>></li>
-                        <li><Link<Page> active="active" target={Page::C}>{ "C" }</Link<Page>></li>
+                        <li><Link<Page> active="active" target={Page::C("foo".into())}>{ "C (foo)" }</Link<Page>></li>
                     </ul>
                 </nav>
             </header>
             
             <main>
                 <div>
-                    <Switch<Page> {switch} />
+                    <Switch<Page> {switch} default={html!(<>{"Not found"}</>)}/>
                 </div>
             </main>
         

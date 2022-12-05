@@ -150,9 +150,9 @@ impl<T: Target> Router<T> {
 }
 
 #[hook]
-pub fn use_router<S>() -> Option<RouterContext<S>>
+pub fn use_router<T>() -> Option<RouterContext<T>>
 where
-    S: Target + 'static,
+    T: Target + 'static,
 {
-    use_context::<RouterContext<S>>()
+    use_context::<RouterContext<T>>()
 }

@@ -18,7 +18,7 @@ where
         .expect("Must be nested under a Router or Nested component of the target type");
 
     let navigation = NavigationContext {
-        base: props.target.render_path(),
+        base: props.target.render_self(),
         parent: Callback::from(move |request: Request| {
             parent.propagate(request);
         }),

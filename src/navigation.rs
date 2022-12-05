@@ -16,22 +16,25 @@ pub(crate) struct NavigationContext {
 
 impl NavigationContext {
     pub(crate) fn propagate(&self, mut request: Request) {
-        log::info!("Propagate: {request:?}");
+        log::debug!("Propagate: {request:?}");
 
         let mut path = self.base.clone();
         path.extend(request.path);
         request.path = path;
 
-        log::info!("Propagate(out): {request:?}");
+        log::debug!("Propagate(out): {request:?}");
 
         self.parent.emit(request);
     }
 
     pub(crate) fn go<T: Target>(&self, target: T) {
-        log::info!("go: {target:?} (base: {:?})", self.base);
+        log::debug!("go: {target:?} (base: {:?})", self.base);
 
-        self.parent.emit(Request {
-            path: target.render_path(),
-        });
+        let mut path = vec![];
+        target.render_path_into(&mut path);
+
+        log::debug!("rendered: {path:?}");
+
+        self.parent.emit(Request { path });
     }
 }

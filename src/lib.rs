@@ -19,4 +19,6 @@ pub mod prelude {
     pub use super::router::*;
     pub use super::switch::*;
     pub use super::target::*;
+
+    pub use yew_nested_router_macros::Target;
 }

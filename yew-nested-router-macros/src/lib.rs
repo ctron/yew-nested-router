@@ -32,6 +32,35 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let render_path = data.variants.iter().map(|v| {
         let name = &v.ident;
 
+        match &v.fields {
+            Fields::Unit => {
+                quote! {
+                    Self::#name => {
+                        self.render_self_into(path);
+                    }
+                }
+            }
+            Fields::Unnamed(_) => {
+                quote! {
+                    Self::#name(nested) => {
+                        self.render_self_into(path);
+                        nested.render_path_into(path);
+                    }
+                }
+            }
+            Fields::Named(_) => {
+                quote! {
+                    Self::#name{..} => {
+                        self.render_self_into(path);
+                    }
+                }
+            }
+        }
+    });
+
+    let render_self = data.variants.iter().map(|v| {
+        let name = &v.ident;
+
         let opts = Opts::from_variant(v).expect("Unable to parse options");
         let value = to_value(&v, &opts);
 
@@ -39,13 +68,13 @@ pub fn derive(input: TokenStream) -> TokenStream {
             // plain route
             Fields::Unit => {
                 quote_spanned! { v.span() =>
-                    Self::#name => vec![#value.into()]
+                    Self::#name => path.push(#value.into())
                 }
             }
             // nested route
             Fields::Unnamed(_) => {
                 quote_spanned! { v.span() =>
-                    Self::#name(_) => vec![#value.into()]
+                    Self::#name(_) => path.push(#value.into())
                 }
             }
             // variables
@@ -62,7 +91,10 @@ pub fn derive(input: TokenStream) -> TokenStream {
                 });
 
                 quote_spanned! { v.span() =>
-                    Self::#name { #(#vars),* } => vec![#value.into(), #(#values),*]
+                    Self::#name { #(#vars),* } => {
+                        path.push(#value.into());
+                        path.extend([#(#values),*]);
+                    }
                 }
             }
         }
@@ -145,7 +177,13 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let output = quote! {
         impl yew_nested_router::target::Target for #ident {
 
-                fn render_path(&self) -> Vec<String> {
+                fn render_self_into(&self, path: &mut Vec<String>) {
+                    match self {
+                        #(#render_self ,)*
+                    }
+                }
+
+                fn render_path_into(&self, path: &mut Vec<String>) {
                     match self {
                         #(#render_path ,)*
                     }

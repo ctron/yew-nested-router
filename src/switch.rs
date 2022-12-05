@@ -46,12 +46,8 @@ where
     S: PartialEq,
 {
     pub switch: Callback<S, Html>,
-    #[prop_or_else(default_callback)]
-    pub default: Callback<(), Html>,
-}
-
-fn default_callback() -> Callback<(), Html> {
-    Callback::from(|()| html!())
+    #[prop_or_default]
+    pub default: Html,
 }
 
 #[function_component(Switch)]

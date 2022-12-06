@@ -1,6 +1,6 @@
 extern crate core;
 
-use darling::util::Override;
+use darling::util::{Flag, Override};
 use darling::FromVariant;
 use proc_macro::{self, TokenStream};
 use quote::{quote, quote_spanned};
@@ -8,6 +8,10 @@ use syn::{parse_macro_input, spanned::Spanned, Data, DeriveInput, Fields, Path, 
 
 /// Get the value of the path segment
 fn to_value(variant: &Variant, opts: &Opts) -> String {
+    if opts.index.is_present() {
+        return "".to_string();
+    }
+
     opts.rename
         .clone()
         .unwrap_or_else(|| variant.ident.to_string().to_lowercase())
@@ -16,6 +20,7 @@ fn to_value(variant: &Variant, opts: &Opts) -> String {
 #[derive(FromVariant, Default)]
 #[darling(default, attributes(target))]
 struct Opts {
+    index: Flag,
     rename: Option<String>,
     default: Option<Override<String>>,
 }

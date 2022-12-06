@@ -1,4 +1,8 @@
+mod debug;
+
 use yew::prelude::*;
+
+pub use debug::*;
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct SectionProps {

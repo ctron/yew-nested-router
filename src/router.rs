@@ -40,6 +40,10 @@ where
             None => false,
         }
     }
+
+    pub fn active(&self) -> &Option<T> {
+        &self.active_target
+    }
 }
 
 /// Properties for the [`Router`] component.

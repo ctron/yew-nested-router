@@ -3,6 +3,9 @@ use yew_nested_router::Target;
 #[derive(Clone, Debug, PartialEq, Eq, Target)]
 pub enum Page {
     /// Simple example
+    #[target(index)]
+    Index,
+    /// Simple example
     A,
     /// Nested target example
     #[target(default)]

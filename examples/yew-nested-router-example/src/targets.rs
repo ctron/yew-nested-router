@@ -20,6 +20,13 @@ pub enum B {
     #[target(rename = "eins")]
     One,
     #[target(rename = "deux")]
-    Two,
-    Three,
+    Two(View),
+    Three(View),
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Target)]
+pub enum View {
+    Overview,
+    Details,
+    Source,
 }

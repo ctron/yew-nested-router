@@ -1,7 +1,16 @@
 nav a {
   cursor: pointer;
+  text-decoration: underline;
 }
 
 nav a.active {
   font-weight: bold;
+}
+
+main {
+  display: flex;
+}
+
+main > * {
+  padding-left: 5rem;
 }

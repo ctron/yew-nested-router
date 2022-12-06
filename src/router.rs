@@ -2,6 +2,7 @@ use crate::navigation::{NavigationContext, Request};
 use crate::target::Target;
 use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
 use std::fmt::Debug;
+use std::rc::Rc;
 use yew::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -9,7 +10,7 @@ pub struct RouterContext<T>
 where
     T: Target,
 {
-    pub(crate) navigation: NavigationContext,
+    pub(crate) navigation: Rc<NavigationContext>,
     // The active target
     pub active_target: Option<T>,
 }
@@ -31,11 +32,22 @@ where
     }
 
     pub fn is_active(&self, target: &T) -> bool {
+        /*
+        log::debug!(
+            "is_active - target: {target:?}, active: {:?}",
+            self.active_target
+        );
+        */
+
         match &self.active_target {
-            Some(current) => {
-                let current = current.render_self();
-                let target = target.render_self();
-                target.starts_with(&current)
+            Some(active) => {
+                // let active = active.render_path();
+                let base = self.navigation.full_base();
+                let mut target_path = self.navigation.global_base().clone();
+                target_path.extend(target.render_path());
+                let result = target_path.starts_with(&base);
+                log::debug!("is_active - full_base: {base:?}, active: {active:?}, target: {target_path:?}, result: {result}");
+                result
             }
             None => false,
         }
@@ -53,6 +65,7 @@ where
     T: Target,
 {
     /// The content to render.
+    #[prop_or_default]
     pub children: Children,
 
     #[prop_or_default]
@@ -71,6 +84,9 @@ pub struct Router<T: Target> {
     history: AnyHistory,
     _listener: HistoryListener,
     target: Option<T>,
+
+    navigation: Rc<NavigationContext>,
+    router: RouterContext<T>,
 }
 
 impl<T> Component for Router<T>
@@ -95,26 +111,31 @@ where
             })
         };
 
+        let (navigation, router) = Self::build_context(&target, ctx);
+
         Self {
             history,
             _listener: listener,
             target,
+            navigation,
+            router,
         }
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        log::debug!("update: {msg:?}");
+        // log::debug!("update: {msg:?}");
 
         match msg {
             Msg::RouteChanged(location) => {
                 let target = Self::parse_location(location).or_else(|| ctx.props().default.clone());
                 if target != self.target {
                     self.target = target;
+                    self.sync_context(ctx);
                     return true;
                 }
             }
             Msg::ChangeRoute(request) => {
-                log::debug!("Pushing state: {:?}", request.path);
+                // log::debug!("Pushing state: {:?}", request.path);
                 let route = format!("/{}", request.path.join("/"));
                 self.history.push(route);
             }
@@ -123,25 +144,17 @@ where
         false
     }
 
+    fn changed(&mut self, ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
+        self.sync_context(ctx);
+        true
+    }
+
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let base = self
-            .target
-            .as_ref()
-            .map(|t| t.render_self())
-            .unwrap_or_default();
-
-        let navigation = NavigationContext {
-            base,
-            parent: ctx.link().callback(Msg::ChangeRoute),
-        };
-
-        let router = RouterContext {
-            navigation: navigation.clone(),
-            active_target: self.target.clone(),
-        };
+        let navigation = self.navigation.clone();
+        let router = self.router.clone();
 
         html! (
-            <ContextProvider<NavigationContext> context={navigation}>
+            <ContextProvider<NavigationContext> context={(*navigation).clone()}>
                 <ContextProvider<RouterContext<T >> context={router}>
                     { for ctx.props().children.iter() }
                 </ContextProvider<RouterContext<T >>>
@@ -153,10 +166,36 @@ where
 impl<T: Target> Router<T> {
     fn parse_location(location: Location) -> Option<T> {
         let path: Vec<&str> = location.path().split('/').skip(1).collect();
-        log::debug!("Path: {path:?}");
+        // log::debug!("Path: {path:?}");
         let target = T::parse_path(&path);
-        log::debug!("New target: {target:?}");
+        // log::debug!("New target: {target:?}");
         target
+    }
+
+    fn sync_context(&mut self, ctx: &Context<Self>) {
+        let (navigation, router) = Self::build_context(&self.target, ctx);
+        self.navigation = navigation;
+        self.router = router;
+    }
+
+    fn build_context(
+        target: &Option<T>,
+        ctx: &Context<Self>,
+    ) -> (Rc<NavigationContext>, RouterContext<T>) {
+        let local_base = target.as_ref().map(|t| t.render_self()).unwrap_or_default();
+
+        let navigation = Rc::new(NavigationContext {
+            local_base,
+            global_base: vec![],
+            parent: ctx.link().callback(Msg::ChangeRoute),
+        });
+
+        let router = RouterContext {
+            navigation: navigation.clone(),
+            active_target: target.clone(),
+        };
+
+        (navigation, router)
     }
 }
 

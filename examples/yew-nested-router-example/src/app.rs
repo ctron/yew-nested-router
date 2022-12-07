@@ -9,31 +9,31 @@ use crate::components::*;
 fn render(page: Page) -> Html {
     match page {
         Page::Index => html!(<Section>
-            <h2>{ "Home" }</h2>
+            <h3>{ "Home" }</h3>
         </Section>),
         Page::A => html!(<Section>
-            <h2>{ "A" }</h2>
+            <h3>{ "A" }</h3>
         </Section>),
-        Page::B(target) => html!(
-            <Nested<B> {target}>
+        Page::B(_) => html!(
+            <Scope<Page, B> mapper={Page::mapper_b}>
                 <Section>
-                    <h2>{ "B" }</h2>
+                    <h3>{ "B" }</h3>
                     <nav>
                         <ul>
                             <li><Link<Page> target={Page::Index}>{ "Home" }</Link<Page>></li>
                             <li><Link<B> active="active" target={B::One}>{ "One" }</Link<B>></li>
-                            <li><Link<B> active="active" target={B::Two(View::Overview)}>{ "Two" }</Link<B>></li>
-                            <li><Link<B> active="active" target={B::Three(View::Overview)}>{ "Three" }</Link<B>></li>
+                            <li><Link<B> active="active" predicate={B::is_two} target={B::Two(View::Overview)}>{ "Two" }</Link<B>></li>
+                            <li><Link<B> active="active" predicate={B::is_three} target={B::Three(View::Overview)}>{ "Three" }</Link<B>></li>
                         </ul>
                     </nav>
                 </Section>
                 <Switch<B> render={render_b} />
-            </Nested<B>>
+            </Scope<Page, B>>
         ),
         Page::C { value } => html!(<Section>
-            <h2>
+            <h3>
                 { format!("C ({value})") }
-            </h2>
+            </h3>
             <nav>
                 <Link<Page> target={Page::B(B::Two(View::Details))}>{ "Jump to Page::B(B::Two(View::Details))" }</Link<Page>>
             </nav>
@@ -44,32 +44,24 @@ fn render(page: Page) -> Html {
 fn render_b(b: B) -> Html {
     match b {
         B::One => html!(<Section><h2>{"One"}</h2></Section>),
-        B::Two(target) => html!(
-            <Nested<View> {target}>
+        B::Two(_) => html!(
+            <Scope<B, View> mapper={B::mapper_two}>
                 <Section>
-                    <h2>{"Two"}</h2>
+                    <h3>{"Two"}</h3>
                     <ViewNav/>
                 </Section>
                 <ViewComponent/>
-            </Nested<View>>
+            </Scope<B, View>>
         ),
-        B::Three(target) => html!(
-            <Nested<View> {target}>
+        B::Three(_) => html!(
+            <Scope<B, View> mapper={B::mapper_three}>
                 <Section>
-                    <h2>{"Three"}</h2>
+                    <h3>{"Three"}</h3>
                     <ViewNav/>
                 </Section>
                 <ViewComponent/>
-            </Nested<View>>
+            </Scope<B, View>>
         ),
-    }
-}
-
-fn render_view(view: View) -> Html {
-    match view {
-        View::Overview => html!(<Section><h2>{"Overview"}</h2></Section>),
-        View::Details => html!(<Section><h2>{"Details"}</h2></Section>),
-        View::Source => html!(<Section><h2>{"Source"}</h2></Section>),
     }
 }
 
@@ -78,9 +70,11 @@ pub fn view_nav() -> Html {
     html!(
         <>
             <nav>
-                <li><Link<View> active="active" target={View::Overview}>{ "Overview" }</Link<View>></li>
-                <li><Link<View> active="active" target={View::Details}>{ "Details" }</Link<View>></li>
-                <li><Link<View> active="active" target={View::Source}>{ "Source" }</Link<View>></li>
+                <ul>
+                    <li><Link<View> active="active" target={View::Overview}>{ "Overview" }</Link<View>></li>
+                    <li><Link<View> active="active" target={View::Details}>{ "Details" }</Link<View>></li>
+                    <li><Link<View> active="active" target={View::Source}>{ "Source" }</Link<View>></li>
+                </ul>
             </nav>
         </>
     )
@@ -90,7 +84,11 @@ pub fn view_nav() -> Html {
 pub fn view() -> Html {
     html!(
         <>
-            <Switch<View> render={render_view}/>
+            <Switch<View> render={|view| match view {
+                View::Overview => html!(<Section><h3>{"Overview"}</h3></Section>),
+                View::Details => html!(<Section><h3>{"Details"}</h3></Section>),
+                View::Source => html!(<Section><h3>{"Source"}</h3></Section>),
+            }}/>
         </>
     )
 }
@@ -101,29 +99,71 @@ pub fn app() -> Html {
         
         <Router<Page>>
 
-            <main>
-        
-                <div>
-                    <h2>{"Main"}</h2>
-            
+            <div style="display: flex;">
+
+                <aside>
                     <nav>
-                        <ul> 
+                        <h2>{"Outside"}</h2>
+        
+                        <ul>
                             <li><Link<Page> active="active" target={Page::Index}>{ "Home" }</Link<Page>></li>
                             <li><Link<Page> active="active" target={Page::A}>{ "A" }</Link<Page>></li>
-                            <li><Link<Page> active="active" target={Page::B(B::One)}>{ "B" }</Link<Page>></li>
-                            <li><Link<Page> active="active" target={Page::C{value: "foo".into()}}>{ "C (foo)" }</Link<Page>></li>
+        
+                            <li>
+                                <Scope<Page, B> mapper={Page::mapper_b}>
+                                    <Link<B> active="active" any=true target={B::One}>{ "B" }</Link<B>>
+                                    <ul>
+                                        <li><Link<Page> active="active" target={Page::B(B::One)}>{ "One" }</Link<Page>></li>
+                                        <li>
+                                            <Scope<B, View> mapper={B::mapper_two}>
+                                                <Link<View> active="active" any=true target={View::Overview}>{ "Two" }</Link<View>>
+                                                <ViewNav/>
+                                            </Scope<B, View>>
+                                        </li>
+            
+                                        <li>
+                                            <Scope<B, View> mapper={B::mapper_three}>
+                                                <Link<View> active="active" predicate={View::any} target={View::Overview}>{ "Three" }</Link<View>>
+                                                <ViewNav/>
+                                            </Scope<B, View>>
+                                        </li>
+                                    </ul>
+                                </Scope<Page, B>>
+                            </li>
                         </ul>
                     </nav>
+                </aside>
+        
+                <div>
+        
+                    <h2>{"Nested"}</h2>
+                
+                    <main>
+                
+                        <div>
+                            <h3>{"Main"}</h3>
+                    
+                            <nav>
+                                <ul> 
+                                    <li><Link<Page> active="active" target={Page::Index}>{ "Home" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" target={Page::A}>{ "A" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" predicate={Page::is_b} target={Page::B(B::One)}>{ "B" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" predicate={Page::is_c} target={Page::C{value: "foo".into()}}>{ "C (foo)" }</Link<Page>></li>
+                                </ul>
+                            </nav>
+                        </div>
+                    
+                        <Switch<Page> {render} default={html!(<>{"Not found"}</>)}/>
+        
+                    </main>
                 </div>
-            
-                <Switch<Page> {render} default={html!(<>{"Not found"}</>)}/>
 
-            </main>
-        
-        <footer>
-            <Debug/>
-        </footer>
-        
+            </div>
+
+            <footer>
+                <Debug/>
+            </footer>
+
         </Router<Page>>
         
     </>)

@@ -1,6 +1,7 @@
 //! Routing target
 
 use std::fmt::Debug;
+use yew::Callback;
 
 /// A target for used by a router.
 pub trait Target: Clone + Debug + Eq + 'static {
@@ -28,4 +29,25 @@ pub trait Target: Clone + Debug + Eq + 'static {
     ///
     /// The path will be the local path, with the prefix already removed.
     fn parse_path(path: &[&str]) -> Option<Self>;
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Mapper<P, C> {
+    pub downwards: Callback<P, Option<C>>,
+    pub upwards: Callback<C, P>,
+}
+
+impl<P, C, PF, CF> From<(PF, CF)> for Mapper<P, C>
+where
+    P: Target,
+    C: Target,
+    PF: Fn(P) -> Option<C> + 'static,
+    CF: Fn(C) -> P + 'static,
+{
+    fn from((down, up): (PF, CF)) -> Self {
+        Self {
+            downwards: down.into(),
+            upwards: up.into(),
+        }
+    }
 }

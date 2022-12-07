@@ -1,4 +1,4 @@
-use crate::navigation::{NavigationContext, Request};
+use crate::scope::ScopeContext;
 use crate::target::Target;
 use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
 use std::fmt::Debug;
@@ -10,7 +10,7 @@ pub struct RouterContext<T>
 where
     T: Target,
 {
-    pub(crate) navigation: Rc<NavigationContext>,
+    pub(crate) scope: Rc<ScopeContext<T>>,
     // The active target
     pub active_target: Option<T>,
 }
@@ -20,10 +20,10 @@ where
     T: Target,
 {
     pub fn go(&self, target: T) {
-        self.navigation.go(target);
+        self.scope.go(target);
     }
 
-    /// check if the provided is the current target
+    /// Check if the provided target is the active target
     pub fn is_same(&self, target: &T) -> bool {
         match &self.active_target {
             Some(current) => current == target,
@@ -32,27 +32,12 @@ where
     }
 
     pub fn is_active(&self, target: &T) -> bool {
-        /*
-        log::debug!(
-            "is_active - target: {target:?}, active: {:?}",
-            self.active_target
-        );
-        */
-
-        match &self.active_target {
-            Some(active) => {
-                // let active = active.render_path();
-                let base = self.navigation.full_base();
-                let mut target_path = self.navigation.global_base().clone();
-                target_path.extend(target.render_path());
-                let result = target_path.starts_with(&base);
-                log::debug!("is_active - full_base: {base:?}, active: {active:?}, target: {target_path:?}, result: {result}");
-                result
-            }
-            None => false,
-        }
+        // FIXME: fix this
+        self.is_same(target)
     }
 
+    /// Get the active target, this may be [`None`], in the case this branch doesn't have an
+    /// active target.
     pub fn active(&self) -> &Option<T> {
         &self.active_target
     }
@@ -74,9 +59,9 @@ where
 
 #[derive(Debug)]
 #[doc(hidden)]
-pub enum Msg {
+pub enum Msg<T: Target> {
     RouteChanged(Location),
-    ChangeRoute(Request),
+    ChangeTarget(T),
 }
 
 /// Top-level router component.
@@ -85,7 +70,7 @@ pub struct Router<T: Target> {
     _listener: HistoryListener,
     target: Option<T>,
 
-    navigation: Rc<NavigationContext>,
+    scope: Rc<ScopeContext<T>>,
     router: RouterContext<T>,
 }
 
@@ -93,7 +78,7 @@ impl<T> Component for Router<T>
 where
     T: Target + 'static,
 {
-    type Message = Msg;
+    type Message = Msg<T>;
     type Properties = RouterProps<T>;
 
     fn create(ctx: &Context<Self>) -> Self {
@@ -111,13 +96,13 @@ where
             })
         };
 
-        let (navigation, router) = Self::build_context(&target, ctx);
+        let (scope, router) = Self::build_context(&target, ctx);
 
         Self {
             history,
             _listener: listener,
             target,
-            navigation,
+            scope,
             router,
         }
     }
@@ -134,9 +119,9 @@ where
                     return true;
                 }
             }
-            Msg::ChangeRoute(request) => {
+            Msg::ChangeTarget(target) => {
                 // log::debug!("Pushing state: {:?}", request.path);
-                let route = format!("/{}", request.path.join("/"));
+                let route = format!("/{}", target.render_path().join("/"));
                 self.history.push(route);
             }
         }
@@ -150,15 +135,15 @@ where
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let navigation = self.navigation.clone();
+        let scope = self.scope.clone();
         let router = self.router.clone();
 
         html! (
-            <ContextProvider<NavigationContext> context={(*navigation).clone()}>
+            <ContextProvider<ScopeContext<T>> context={(*scope).clone()}>
                 <ContextProvider<RouterContext<T >> context={router}>
                     { for ctx.props().children.iter() }
                 </ContextProvider<RouterContext<T >>>
-            </ContextProvider<NavigationContext>>
+            </ContextProvider<ScopeContext<T>>>
         )
     }
 }
@@ -173,29 +158,25 @@ impl<T: Target> Router<T> {
     }
 
     fn sync_context(&mut self, ctx: &Context<Self>) {
-        let (navigation, router) = Self::build_context(&self.target, ctx);
-        self.navigation = navigation;
+        let (scope, router) = Self::build_context(&self.target, ctx);
+        self.scope = scope;
         self.router = router;
     }
 
     fn build_context(
         target: &Option<T>,
         ctx: &Context<Self>,
-    ) -> (Rc<NavigationContext>, RouterContext<T>) {
-        let local_base = target.as_ref().map(|t| t.render_self()).unwrap_or_default();
-
-        let navigation = Rc::new(NavigationContext {
-            local_base,
-            global_base: vec![],
-            parent: ctx.link().callback(Msg::ChangeRoute),
+    ) -> (Rc<ScopeContext<T>>, RouterContext<T>) {
+        let scope = Rc::new(ScopeContext {
+            upwards: ctx.link().callback(Msg::ChangeTarget),
         });
 
         let router = RouterContext {
-            navigation: navigation.clone(),
+            scope: scope.clone(),
             active_target: target.clone(),
         };
 
-        (navigation, router)
+        (scope, router)
     }
 }
 
@@ -204,5 +185,5 @@ pub fn use_router<T>() -> Option<RouterContext<T>>
 where
     T: Target + 'static,
 {
-    use_context::<RouterContext<T>>()
+    use_context()
 }

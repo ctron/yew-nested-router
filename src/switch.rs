@@ -23,12 +23,8 @@ where
 {
     let router = use_router::<T>().expect("Must be a child of a Router or Nested component");
 
-    html!(<>
-        {
-            match router.active_target {
-                Some(target) => props.render.emit(target),
-                None => props.default.clone(),
-            }
-        }
-    </>)
+    match router.active_target {
+        Some(target) => props.render.emit(target),
+        None => props.default.clone(),
+    }
 }

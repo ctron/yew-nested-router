@@ -14,6 +14,12 @@ where
     /// The link target.
     pub target: T,
 
+    #[prop_or_default]
+    pub any: bool,
+
+    #[prop_or_default]
+    pub predicate: Option<Callback<T, bool>>,
+
     /// The element to render, default to `<a>`.
     #[prop_or_else(default::element)]
     pub element: String,
@@ -43,11 +49,26 @@ pub fn link<T>(props: &LinkProps<T>) -> Html
 where
     T: Target + 'static,
 {
-    let router = use_router().expect("Need Router or Nested component");
+    let router = use_router::<T>().expect("Need Router or Nested component");
 
     let mut classes = props.class.clone();
 
-    match router.is_active(&props.target) {
+    let active = match props.any {
+        true => {
+            let active = router.active();
+            active.is_some()
+        }
+        false => match &props.predicate {
+            Some(predicate) => router
+                .active()
+                .clone()
+                .map(|t| predicate.emit(t))
+                .unwrap_or(false),
+            None => router.is_active(&props.target),
+        },
+    };
+
+    match active {
         true => classes.extend(props.active.clone()),
         false => classes.extend(props.inactive.clone()),
     }

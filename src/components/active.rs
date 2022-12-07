@@ -7,7 +7,8 @@ pub struct ActiveProps<T>
 where
     T: Target,
 {
-    pub target: T,
+    #[prop_or_default]
+    pub target: Option<T>,
 
     pub children: Children,
 
@@ -40,7 +41,12 @@ where
 
     let mut class = props.class.clone();
 
-    match router.is_active(&props.target) {
+    let active = match &props.target {
+        Some(target) => router.is_active(target),
+        None => router.active().is_some(),
+    };
+
+    match active {
         true => class.extend(props.active.clone()),
         false => class.extend(props.inactive.clone()),
     }

@@ -1,9 +1,10 @@
 extern crate core;
 
+use convert_case::{Case, Casing};
 use darling::util::{Flag, Override};
 use darling::FromVariant;
 use proc_macro::{self, TokenStream};
-use quote::{quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned};
 use syn::{parse_macro_input, spanned::Spanned, Data, DeriveInput, Fields, Path, Variant};
 
 /// Get the value of the path segment
@@ -179,6 +180,116 @@ pub fn derive(input: TokenStream) -> TokenStream {
         }
     });
 
+    let mappers = data.variants.iter().map(|v| {
+        let name = &v.ident;
+
+        let fn_base_name = name.to_string().to_case(Case::Snake);
+
+        let map_name = format_ident!("map_{}", fn_base_name);
+        let mapper_name = format_ident!("mapper_{}", fn_base_name);
+
+        match &v.fields {
+            Fields::Unit => quote!(),
+            Fields::Unnamed(fields) => {
+                let tys = fields
+                    .unnamed
+                    .iter()
+                    .map(|f| f.ty.clone())
+                    .collect::<Vec<_>>();
+
+                let vars = fields
+                    .unnamed
+                    .iter()
+                    .enumerate()
+                    .map(|(i, _)| format_ident!("arg_{i}"))
+                    .collect::<Vec<_>>();
+
+                let tys = match tys.len() {
+                    1 => {
+                        let f = tys.first().unwrap();
+                        quote! { #f }
+                    }
+                    _ => {
+                        quote! {(#(#tys),*)}
+                    }
+                };
+
+                let vars = match vars.len() {
+                    1 => {
+                        let f = vars.first().unwrap();
+                        quote! { #f }
+                    }
+                    _ => {
+                        quote! {(#(#vars),*)}
+                    }
+                };
+
+                quote!(
+                    pub fn #map_name(self) -> Option<#tys> {
+                        match self {
+                            Self::#name(#vars) => Some(#vars),
+                            _ => None,
+                        }
+                    }
+
+                    pub fn #mapper_name(_:()) -> yew_nested_router::prelude::Mapper<Self, #tys> {
+                        (Self::#map_name, Self::#name).into()
+                    }
+                )
+            }
+            Fields::Named(fields) => {
+                let tys = fields
+                    .named
+                    .iter()
+                    .map(|f| f.ty.clone())
+                    .collect::<Vec<_>>();
+
+                let vars = fields
+                    .named
+                    .iter()
+                    .filter_map(|f| f.ident.as_ref())
+                    .collect::<Vec<_>>();
+                quote!(
+                    pub fn #map_name(self) -> Option<(#(#tys),*)> {
+                        match self {
+                            Self::#name{#(#vars),*} => Some((#(#vars),*)),
+                            _ => None,
+                        }
+                    }
+                )
+            }
+        }
+    });
+
+    let predicates = data.variants.iter().map(|v| {
+        let name = &v.ident;
+
+        let fn_name = name.to_string().to_case(Case::Snake);
+        let fn_name = format_ident!("is_{}", fn_name);
+
+        match &v.fields {
+            Fields::Unit => quote!(
+                pub fn #fn_name(self) -> bool {
+                    matches!(self, Self::#name)
+                }
+            ),
+            Fields::Unnamed(_) => {
+                quote!(
+                    pub fn #fn_name(self) -> bool {
+                        matches!(self, Self::#name(_))
+                    }
+                )
+            }
+            Fields::Named(_) => {
+                quote!(
+                    pub fn #fn_name(self) -> bool {
+                        matches!(self, Self::#name{..})
+                    }
+                )
+            }
+        }
+    });
+
     let output = quote! {
         impl yew_nested_router::target::Target for #ident {
 
@@ -202,6 +313,14 @@ pub fn derive(input: TokenStream) -> TokenStream {
                 }
 
         }
+
+        impl #ident {
+            #(#mappers)*
+            #(#predicates)*
+
+            pub fn any(self) -> bool { true }
+        }
     };
+
     output.into()
 }

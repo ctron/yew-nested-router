@@ -3,20 +3,19 @@
 pub mod components;
 pub mod target;
 
-mod navigation;
-mod nested;
 mod router;
+mod scope;
 mod switch;
 
-pub use nested::Nested;
 pub use router::Router;
+pub use scope::Scope;
 pub use switch::Switch;
 pub use yew_nested_router_macros::Target;
 
 /// Common includes.
 pub mod prelude {
-    pub use super::nested::*;
     pub use super::router::*;
+    pub use super::scope::*;
     pub use super::switch::*;
     pub use super::target::*;
 

@@ -1,4 +1,4 @@
-use yew_nested_router::Target;
+use yew_nested_router::prelude::Target;
 
 #[derive(Clone, Debug, PartialEq, Eq, Target)]
 pub enum Page {

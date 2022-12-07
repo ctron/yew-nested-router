@@ -1,5 +1,8 @@
 # Yew Nested Router
 
+[![crates.io](https://img.shields.io/crates/v/yew-nested-router.svg)](https://crates.io/crates/yew-nested-router)
+[![docs.rs](https://docs.rs/yew-nested-router/badge.svg)](https://docs.rs/yew-nested-router)
+
 A router for Yew which supports nesting.
 
 ## State

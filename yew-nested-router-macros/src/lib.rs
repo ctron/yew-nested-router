@@ -187,6 +187,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
         let map_name = format_ident!("map_{}", fn_base_name);
         let mapper_name = format_ident!("mapper_{}", fn_base_name);
+        let with_name = format_ident!("with_{}", fn_base_name);
 
         match &v.fields {
             Fields::Unit => quote!(),
@@ -234,6 +235,14 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
                     pub fn #mapper_name(_:()) -> yew_nested_router::prelude::Mapper<Self, #tys> {
                         (Self::#map_name, Self::#name).into()
+                    }
+
+                    pub fn #with_name<F, R>(f: F) -> impl Fn(Self) -> R
+                    where
+                        F: Fn(#tys) -> R,
+                        R: std::default::Default
+                    {
+                        move |s| s.#map_name().map(|v|f(v)).unwrap_or_default()
                     }
                 )
             }

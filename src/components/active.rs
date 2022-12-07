@@ -42,7 +42,7 @@ where
     let mut class = props.class.clone();
 
     let active = match &props.target {
-        Some(target) => router.is_active(target),
+        Some(target) => router.is_same(target),
         None => router.active().is_some(),
     };
 

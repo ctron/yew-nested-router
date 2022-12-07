@@ -31,9 +31,15 @@ where
         }
     }
 
-    pub fn is_active(&self, target: &T) -> bool {
-        // FIXME: fix this
-        self.is_same(target)
+    pub fn is_active(&self, target: &T, predicate: Option<&Callback<T, bool>>) -> bool {
+        match predicate {
+            Some(predicate) => self
+                .active_target
+                .clone()
+                .map(|target| predicate.emit(target))
+                .unwrap_or_default(),
+            None => self.is_same(target),
+        }
     }
 
     /// Get the active target, this may be [`None`], in the case this branch doesn't have an

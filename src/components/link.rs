@@ -64,7 +64,7 @@ where
                 .clone()
                 .map(|t| predicate.emit(t))
                 .unwrap_or(false),
-            None => router.is_active(&props.target),
+            None => router.is_same(&props.target),
         },
     };
 

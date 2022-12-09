@@ -9,6 +9,7 @@ repository = "https://github.com/ctron/yew-nested-router"
 categories = ["wasm", "web-programming", "gui"]
 keywords = ["yew", "router", "nested", "web", "html"]
 readme = "README.md"
+rust-version = "1.60"
 
 [dependencies]
 gloo-history = "0.1.2"

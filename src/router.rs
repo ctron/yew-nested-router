@@ -19,8 +19,9 @@ impl<T> RouterContext<T>
 where
     T: Target,
 {
-    pub fn go(&self, target: T) {
-        self.scope.go(target);
+    /// Push a new state to the history. This changes the current target, but doesn't leave the page.
+    pub fn push(&self, target: T) {
+        self.scope.push(target);
     }
 
     /// Check if the provided target is the active target
@@ -31,6 +32,20 @@ where
         }
     }
 
+    /// Check if the target is active.
+    ///
+    /// This is intended for components to find out if their target, or part of their target
+    /// is active. If the function is provided with a predicate, then this will override the
+    /// decision process. Otherwise function will check if the provided `target` is the same as
+    /// the active target.
+    ///
+    /// Assume you have a nested navigation tree. The active state of a leaf entry would be
+    /// identified by the target being "the same". While branch entries would need to provide a
+    /// predicate, as there is no "value" to compare to.
+    ///
+    /// A component supporting this model can provide two properties: a target, and an optional
+    /// predicate. The user can then configure this accordingly. The component can simply pass
+    /// the information to this function to perform the check.
     pub fn is_active(&self, target: &T, predicate: Option<&Callback<T, bool>>) -> bool {
         match predicate {
             Some(predicate) => self

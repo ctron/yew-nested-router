@@ -11,7 +11,11 @@ pub enum Page {
     #[target(default)]
     B(B),
     /// Target with data
-    C { value: String },
+    C {
+        value: String,
+        #[target(nested)]
+        target: C,
+    },
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Target)]
@@ -22,6 +26,15 @@ pub enum B {
     #[target(rename = "deux")]
     Two(View),
     Three(View),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Target)]
+pub enum C {
+    Foo {
+        value: String,
+    },
+    /// variant with both values being actual values
+    Bar(String, #[target(value)] usize),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Target)]

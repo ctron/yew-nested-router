@@ -74,7 +74,7 @@ where
     }
 
     let target = props.target.clone();
-    let onclick = Callback::from(move |_| router.go(target.clone()));
+    let onclick = Callback::from(move |_| router.push(target.clone()));
 
     html!(
         <@{props.element.clone()}

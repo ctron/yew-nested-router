@@ -30,7 +30,7 @@ fn render(page: Page) -> Html {
                 <Switch<B> render={render_b} />
             </Scope<Page, B>>
         ),
-        Page::C { value } => html!(<Section>
+        Page::C { value, target } => html!(<Section>
             <h3>
                 { format!("C ({value})") }
             </h3>
@@ -148,7 +148,7 @@ pub fn app() -> Html {
                                     <li><Link<Page> active="active" target={Page::Index}>{ "Home" }</Link<Page>></li>
                                     <li><Link<Page> active="active" target={Page::A}>{ "A" }</Link<Page>></li>
                                     <li><Link<Page> active="active" predicate={Page::is_b} target={Page::B(B::One)}>{ "B" }</Link<Page>></li>
-                                    <li><Link<Page> active="active" predicate={Page::is_c} target={Page::C{value: "foo".into()}}>{ "C (foo)" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" predicate={Page::is_c} target={Page::C{value: "foo".into(), target: C::Foo{value: "value".to_string()}}}>{ "C (foo)" }</Link<Page>></li>
                                 </ul>
                             </nav>
                         </div>

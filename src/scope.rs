@@ -14,7 +14,7 @@ impl<C> ScopeContext<C>
 where
     C: Target,
 {
-    pub(crate) fn go(&self, target: C) {
+    pub(crate) fn push(&self, target: C) {
         self.upwards.emit(target);
     }
 }

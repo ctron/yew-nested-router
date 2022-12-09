@@ -16,6 +16,7 @@ where
     pub default: Html,
 }
 
+/// A component two switch rendering between the different targets.
 #[function_component(Switch)]
 pub fn switch<T>(props: &SwitchProps<T>) -> Html
 where

@@ -31,10 +31,50 @@ pub trait Target: Clone + Debug + Eq + 'static {
     fn parse_path(path: &[&str]) -> Option<Self>;
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Mapper<P, C> {
     pub downwards: Callback<P, Option<C>>,
     pub upwards: Callback<C, P>,
+}
+
+impl<P, C> Clone for Mapper<P, C>
+where
+    P: Target,
+    C: Target,
+{
+    fn clone(&self) -> Self {
+        Self {
+            downwards: self.downwards.clone(),
+            upwards: self.upwards.clone(),
+        }
+    }
+}
+
+impl<P, C> Mapper<P, C>
+where
+    P: Target,
+    C: Target,
+{
+    pub fn new<PF, CF>(downwards: PF, upwards: CF) -> Self
+    where
+        PF: Fn(P) -> Option<C> + 'static,
+        CF: Fn(C) -> P + 'static,
+    {
+        Self {
+            downwards: downwards.into(),
+            upwards: upwards.into(),
+        }
+    }
+}
+
+impl<P, C> From<Mapper<P, C>> for Callback<(), Mapper<P, C>>
+where
+    P: Target,
+    C: Target,
+{
+    fn from(mapper: Mapper<P, C>) -> Self {
+        Callback::from(move |()| mapper.clone())
+    }
 }
 
 impl<P, C, PF, CF> From<(PF, CF)> for Mapper<P, C>
@@ -45,9 +85,6 @@ where
     CF: Fn(C) -> P + 'static,
 {
     fn from((down, up): (PF, CF)) -> Self {
-        Self {
-            downwards: down.into(),
-            upwards: up.into(),
-        }
+        Self::new(down, up)
     }
 }

@@ -18,14 +18,19 @@ pub enum Page {
     },
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Target)]
+#[derive(Clone, Debug, PartialEq, Eq, Target)]
 pub enum B {
-    #[default]
     #[target(rename = "eins")]
     One,
     #[target(rename = "deux")]
     Two(View),
     Three(View),
+}
+
+impl Default for B {
+    fn default() -> Self {
+        Self::One
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Target)]

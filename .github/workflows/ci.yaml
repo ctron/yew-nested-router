@@ -49,3 +49,8 @@ jobs:
       - name: Test
         run: |
           cargo test --release
+
+      - name: Build (example)
+        run: |
+          cd examples/yew-nested-router-example
+          cargo build --release

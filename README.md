@@ -19,7 +19,7 @@ The following things have to be done before a release makes sense:
 * [x] Better handling of the `/` (home, index) route: use `[target(index)]` in the index variant.
 * [x] Fix issue when "not found" is shown that elements are active
 * [x] Allow "is active" outside the nested tree, using absolute targets.
-* [ ] Allow having value capturing *and* nested type as the same time.
+* [x] Allow having value capturing *and* nested type as the same time.
 * [ ] Think about handling state, currently this only handles the path. The History API however can do more.
 * [ ] Probably some more, feel free to raise issues.
 

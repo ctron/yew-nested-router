@@ -30,7 +30,7 @@ fn render(page: Page) -> Html {
                 <Switch<B> render={render_b} />
             </Scope<Page, B>>
         ),
-        Page::C { value, target } => html!(<Section>
+        Page::C { value, target: _target } => html!(<Section>
             <h3>
                 { format!("C ({value})") }
             </h3>

@@ -8,8 +8,7 @@ pub enum Page {
     /// Simple example
     A,
     /// Nested target example
-    #[target(default)]
-    B(B),
+    B(#[target(default)] B),
     /// Target with data
     C {
         value: String,

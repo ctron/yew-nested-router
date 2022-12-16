@@ -318,7 +318,7 @@ where
                             quote!(<#t as core::default::Default>::default()),
                         ),
                     );
-                    quote_spanned! { v.span() =>
+                    quote! {
                         [#disc, #(#captures, )*] => #init,
                     }
                 }
@@ -329,7 +329,7 @@ where
                         &values,
                         target_converter(nested.ident.as_ref(), quote!(#default ())),
                     );
-                    quote_spanned! { v.span() =>
+                    quote! {
                         [#disc, #(#captures, )*] => #init,
                     }
                 }

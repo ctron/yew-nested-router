@@ -65,6 +65,14 @@ where
             upwards: upwards.into(),
         }
     }
+
+    pub fn new_callback<PF, CF>(downwards: PF, upwards: CF) -> Callback<(), Self>
+    where
+        PF: Fn(P) -> Option<C> + 'static,
+        CF: Fn(C) -> P + 'static,
+    {
+        Self::new(downwards, upwards).into()
+    }
 }
 
 impl<P, C> From<Mapper<P, C>> for Callback<(), Mapper<P, C>>

@@ -31,6 +31,7 @@ where
     pub children: Children,
 }
 
+/// A component, translating down to the next level.
 #[function_component(Scope)]
 pub fn scope<P, C>(props: &ScopeProps<P, C>) -> Html
 where

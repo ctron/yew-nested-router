@@ -502,6 +502,7 @@ fn predicates(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
     })
 }
 
+/// Helps implementing the `Target` trait in an enum.
 #[proc_macro_derive(Target, attributes(target))]
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);

@@ -26,7 +26,6 @@ fn to_discriminator(variant: &Variant, opts: &Opts) -> String {
 struct Opts {
     index: Flag,
     rename: Option<String>,
-    default: Option<Override<String>>,
 }
 
 #[derive(FromField, Default)]
@@ -34,6 +33,7 @@ struct Opts {
 struct FieldOpts {
     nested: Flag,
     value: Flag,
+    default: Option<Override<String>>,
 }
 
 impl FieldOpts {
@@ -246,6 +246,7 @@ fn parse_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                 true,
                 &fields.unnamed,
                 |_, cap| from_str(&cap),
+                |_, target| quote!(#target),
                 |name, values, target| quote!(Some(Self::#name(#(#values, )* #target))),
             ),
             Fields::Named(fields) => parse_rules(
@@ -257,22 +258,28 @@ fn parse_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                     let from = from_str(&cap);
                     quote!(#name: #from)
                 },
+                |name, target| {
+                    let name = name.expect("Must have a name");
+                    quote!(#name: #target)
+                },
                 |name, values, target| quote!(Some(Self::#name { #(#values, )* #target})),
             ),
         }
     })
 }
 
-fn parse_rules<P, F1, F2>(
+fn parse_rules<P, F1, F2, F3>(
     v: &Variant,
     expect_target: bool,
     fields: &Punctuated<Field, P>,
     converter: F1,
-    ctor: F2,
+    target_converter: F2,
+    ctor: F3,
 ) -> TokenStream
 where
     F1: Fn(Option<&Ident>, &Ident) -> TokenStream,
-    F2: Fn(&Ident, &Vec<TokenStream>, TokenStream) -> TokenStream,
+    F2: Fn(Option<&Ident>, TokenStream) -> TokenStream,
+    F3: Fn(&Ident, &Vec<TokenStream>, TokenStream) -> TokenStream,
 {
     let name = &v.ident;
 
@@ -299,12 +306,17 @@ where
         Some(nested) => {
             let t = &nested.ty;
 
-            let default = match &opts.default {
+            let field_opts = FieldOpts::from_field(&nested).expect("Unable to parse field options");
+
+            let default = match &field_opts.default {
                 Some(Override::Inherit) => {
                     let init = ctor(
                         name,
                         &values,
-                        quote!(<#t as core::default::Default>::default()),
+                        target_converter(
+                            nested.ident.as_ref(),
+                            quote!(<#t as core::default::Default>::default()),
+                        ),
                     );
                     quote_spanned! { v.span() =>
                         [#disc, #(#captures, )*] => #init,
@@ -312,7 +324,11 @@ where
                 }
                 Some(Override::Explicit(default)) => {
                     let default = syn::parse_str::<Path>(default).expect("Path to function");
-                    let init = ctor(name, &values, quote!(#default ()));
+                    let init = ctor(
+                        name,
+                        &values,
+                        target_converter(nested.ident.as_ref(), quote!(#default ())),
+                    );
                     quote_spanned! { v.span() =>
                         [#disc, #(#captures, )*] => #init,
                     }
@@ -322,7 +338,11 @@ where
                 }
             };
 
-            let init = ctor(name, &values, quote!(target));
+            let init = ctor(
+                name,
+                &values,
+                target_converter(nested.ident.as_ref(), quote!(target)),
+            );
             quote_spanned! { v.span() =>
                 #default
                 [#disc, #(#captures, )* rest@..] => match #t::parse_path(rest) {

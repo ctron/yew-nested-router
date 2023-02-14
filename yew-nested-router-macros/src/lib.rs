@@ -92,7 +92,7 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             Fields::Unit => {
                 quote_spanned! { v.span() =>
                     Self::#name => {
-                        self.render_self_into(path);
+                        self.render_self_into(__internal_path);
                     }
                 }
             }
@@ -107,7 +107,7 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 
                 let nested = match nested.is_some() {
                     true => {
-                        quote! { nested.render_path_into(path); }
+                        quote! { nested.render_path_into(__internal_path); }
                     }
                     false => {
                         quote! {}
@@ -116,7 +116,7 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 
                 quote_spanned! { v.span() =>
                     Self::#name(#(#values),*) => {
-                        self.render_self_into(path);
+                        self.render_self_into(__internal_path);
                         #nested
                     }
                 }
@@ -128,7 +128,7 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                         let nested = nested.ident.as_ref().expect("Field must have a name");
                         (
                             quote! { #nested: nested, .. },
-                            quote! { nested.render_path_into(path); },
+                            quote! { nested.render_path_into(__internal_path); },
                         )
                     }
                     (_, None) => (quote! {..}, quote! {}),
@@ -136,7 +136,7 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 
                 quote_spanned! { v.span() =>
                     Self::#name{ #capture } => {
-                        self.render_self_into(path);
+                        self.render_self_into(__internal_path);
                         #nested
                     }
                 }
@@ -192,19 +192,19 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             // plain route
             Fields::Unit => {
                 quote_spanned! { v.span() =>
-                    Self::#name => { path.push(#disc.into()); }
+                    Self::#name => { __internal_path.push(#disc.into()); }
                 }
             }
             // nested route
             Fields::Unnamed(fields) => {
                 let (captures, values) =
                     capture_values(true, &fields.unnamed, quote! { _ }, |name| {
-                        quote! { path.push(#name.to_string()); }
+                        quote! { __internal_path.push(#name.to_string()); }
                     });
 
                 quote_spanned! { v.span() =>
                     Self::#name(#(#captures),*) => {
-                        path.push(#disc.into());
+                        __internal_path.push(#disc.into());
                         #(#values)*
                     }
                 }
@@ -213,12 +213,12 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             Fields::Named(fields) => {
                 let (captures, values) =
                     capture_values(false, &fields.named, quote! { .. }, |name| {
-                        quote! { path.push(#name.to_string()); }
+                        quote! { __internal_path.push(#name.to_string()); }
                     });
 
                 quote_spanned! { v.span() =>
                     Self::#name { #(#captures),* } => {
-                        path.push(#disc.into());
+                        __internal_path.push(#disc.into());
                         #(#values)*
                     }
                 }
@@ -521,20 +521,20 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let output = quote! {
         impl yew_nested_router::target::Target for #ident {
 
-                fn render_self_into(&self, path: &mut Vec<String>) {
+                fn render_self_into(&self, __internal_path: &mut Vec<String>) {
                     match self {
                         #(#render_self ,)*
                     }
                 }
 
-                fn render_path_into(&self, path: &mut Vec<String>) {
+                fn render_path_into(&self, __internal_path: &mut Vec<String>) {
                     match self {
                         #(#render_path ,)*
                     }
                 }
 
-                fn parse_path(path: &[&str]) -> Option<Self> {
-                    match path {
+                fn parse_path(__internal_path: &[&str]) -> Option<Self> {
+                    match __internal_path {
                         #(#parse_path ,)*
                         _ => None,
                     }

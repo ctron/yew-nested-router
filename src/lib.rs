@@ -228,6 +228,7 @@
 pub mod components;
 pub mod target;
 
+mod base;
 mod router;
 mod scope;
 mod switch;

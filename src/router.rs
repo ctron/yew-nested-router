@@ -1,3 +1,4 @@
+use crate::base;
 use crate::scope::ScopeContext;
 use crate::target::Target;
 use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
@@ -74,8 +75,32 @@ where
     #[prop_or_default]
     pub children: Children,
 
+    /// The default target to use in case none matched.
     #[prop_or_default]
     pub default: Option<T>,
+
+    /// The application base.
+    ///
+    /// Defaults to an empty string or the content of the `href` attribute of the `<base>` element.
+    ///
+    /// This can be used in case the application is hosted on a sub path to adapt paths generated
+    /// and expected by the router.
+    ///
+    /// ## Usage with `trunk`
+    ///
+    /// If you are using `trunk` to build the application, you can add the following to your
+    /// `index.html` file:
+    ///
+    /// ```html
+    /// <head>
+    ///   <base data-trunk-public-url/>
+    /// </head>
+    /// ```
+    ///
+    /// This will automatically populate the `<base>` element with the root provided using the
+    /// `--public-url` argument.
+    #[prop_or_default]
+    pub base: Option<String>,
 }
 
 #[derive(Debug)]
@@ -93,6 +118,8 @@ pub struct Router<T: Target> {
 
     scope: Rc<ScopeContext<T>>,
     router: RouterContext<T>,
+
+    base: String,
 }
 
 impl<T> Component for Router<T>
@@ -107,8 +134,15 @@ where
 
         let cb = ctx.link().callback(Msg::RouteChanged);
 
+        let base = ctx
+            .props()
+            .base
+            .clone()
+            .or_else(|| base::eval_base())
+            .unwrap_or_else(|| "".into());
+
         let target =
-            Self::parse_location(history.location()).or_else(|| ctx.props().default.clone());
+            Self::parse_location(&base, history.location()).or_else(|| ctx.props().default.clone());
 
         let listener = {
             let history = history.clone();
@@ -125,6 +159,7 @@ where
             target,
             scope,
             router,
+            base,
         }
     }
 
@@ -133,7 +168,8 @@ where
 
         match msg {
             Msg::RouteChanged(location) => {
-                let target = Self::parse_location(location).or_else(|| ctx.props().default.clone());
+                let target = Self::parse_location(&self.base, location)
+                    .or_else(|| ctx.props().default.clone());
                 if target != self.target {
                     self.target = target;
                     self.sync_context(ctx);
@@ -142,7 +178,8 @@ where
             }
             Msg::ChangeTarget(target) => {
                 // log::debug!("Pushing state: {:?}", request.path);
-                let route = format!("/{}", target.render_path().join("/"));
+                let route = format!("{}/{}", self.base, target.render_path().join("/"));
+                log::debug!("Push URL: {route}");
                 self.history.push(route);
             }
         }
@@ -170,11 +207,22 @@ where
 }
 
 impl<T: Target> Router<T> {
-    fn parse_location(location: Location) -> Option<T> {
-        let path: Vec<&str> = location.path().split('/').skip(1).collect();
-        // log::debug!("Path: {path:?}");
+    fn parse_location(base: &str, location: Location) -> Option<T> {
+        // get the current path
+        let path = location.path();
+        // if the prefix doesn't match, nothing will
+        if !path.starts_with(&base) {
+            return None;
+        }
+        // split off the prefix
+        let (_, path) = path.split_at(base.len());
+        log::debug!("Path: {path}");
+
+        // parse into path segments
+        let path: Vec<&str> = path.split('/').skip(1).collect();
+        log::debug!("Path: {path:?}");
         let target = T::parse_path(&path);
-        // log::debug!("New target: {target:?}");
+        log::debug!("New target: {target:?}");
         target
     }
 

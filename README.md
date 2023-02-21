@@ -3,7 +3,19 @@
 [![crates.io](https://img.shields.io/crates/v/yew-nested-router.svg)](https://crates.io/crates/yew-nested-router)
 [![docs.rs](https://docs.rs/yew-nested-router/badge.svg)](https://docs.rs/yew-nested-router)
 
-A router for Yew which supports nesting.
+A router for Yew that supports nesting.
+
+## Example
+
+In a nutshell, you define a main router entry point (`<Router<T>>`) where you can switch the rendering (`<Switch<T>>`).
+You can then translate down to the next layer (`Scope<P, C>`), so that you can switcher rendering again (`Switch<C>`).
+
+See a complete example: [examples/yew-nested-router-example](examples/yew-nested-router-example), which
+you can run using:
+
+```shell
+trunk serve examples/yew-nested-router-example/index.html
+```
 
 ## Rationale
 
@@ -28,19 +40,3 @@ implementation made:
   using the forward slash (`/`) into segments.
 * The implementation should try to help avoiding mistakes by using Rust's type system. But it won't fully guard against
   all mistakes which can be made. 
-
-## Room for improvement
-
-* [ ] Think about handling state, currently this only handles the path. The History API however can do more.
-
-## Example
-
-In a nutshell, you define a main router entry point (`<Router<T>>`) where you can switch the rendering (`<Switch<T>>`).
-You can then translate down to the next layer (`Scope<P, C>`), so that you can switcher rendering again (`Switch<C>`).
-
-See a complete example: [examples/yew-nested-router-example](examples/yew-nested-router-example), which
-you can run using:
-
-```shell
-trunk serve examples/yew-nested-router-example/index.html
-```

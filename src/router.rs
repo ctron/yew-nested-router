@@ -250,6 +250,10 @@ impl<T: Target> Router<T> {
 }
 
 #[hook]
+/// Get access to the router.
+///
+/// The hook requires to be called from a component which is nested into a [`Router`] component of
+/// the type `T` provided here. If not, it will return [`None`].
 pub fn use_router<T>() -> Option<RouterContext<T>>
 where
     T: Target + 'static,

@@ -2,6 +2,7 @@ use crate::base;
 use crate::scope::ScopeContext;
 use crate::target::Target;
 use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
+use std::borrow::Cow;
 use std::fmt::Debug;
 use std::rc::Rc;
 use yew::prelude::*;
@@ -178,7 +179,16 @@ where
             }
             Msg::ChangeTarget(target) => {
                 // log::debug!("Pushing state: {:?}", request.path);
-                let route = format!("{}/{}", self.base, target.render_path().join("/"));
+                let route = format!(
+                    "{}/{}",
+                    self.base,
+                    target
+                        .render_path()
+                        .into_iter()
+                        .map(|segment| urlencoding::encode(&segment).to_string())
+                        .collect::<Vec<_>>()
+                        .join("/")
+                );
                 log::debug!("Push URL: {route}");
                 self.history.push(route);
             }
@@ -219,10 +229,25 @@ impl<T: Target> Router<T> {
         log::debug!("Path: {path}");
 
         // parse into path segments
-        let path: Vec<&str> = path.split('/').skip(1).collect();
+        let path: Result<Vec<Cow<str>>, _> = path
+            .split('/')
+            .skip(1)
+            // urldecode in the process
+            .map(|segment| urlencoding::decode(segment))
+            .collect();
+
+        // get a path, or return none if we had an urldecode error
+        let path = match &path {
+            Ok(path) => path.iter().map(|s| s.as_ref()).collect::<Vec<_>>(),
+            Err(_) => return None,
+        };
+
+        // parse the path into a target
         log::debug!("Path: {path:?}");
         let target = T::parse_path(&path);
         log::debug!("New target: {target:?}");
+
+        // done
         target
     }
 

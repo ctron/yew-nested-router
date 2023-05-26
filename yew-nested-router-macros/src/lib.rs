@@ -439,7 +439,7 @@ fn mappers(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                         F: Fn(#types) -> R,
                         R: std::default::Default
                     {
-                        move |s| s.#map_name().map(|v|f(v)).unwrap_or_default()
+                        move |s| s.#map_name().map(&f).unwrap_or_default()
                     }
                 }
             },
@@ -458,7 +458,7 @@ fn mappers(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                     F: Fn(#types) -> R,
                     R: std::default::Default
                 {
-                    move |s| s.#map_name().map(|v|f(v)).unwrap_or_default()
+                    move |s| s.#map_name().map(&f).unwrap_or_default()
                 }
             },
         }

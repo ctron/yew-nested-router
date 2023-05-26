@@ -493,8 +493,9 @@ fn predicates(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             Fields::Named(_) => {
                 quote_spanned! { v.span() =>
                     #[allow(unused)]
-                    pub fn #fn_name(&self) -> bool {
-                        matches!(*self, Self::#name{..})
+                    #[allow(clippy::wrong_self_convention)]
+                    pub fn #fn_name(self) -> bool {
+                        matches!(self, Self::#name{..})
                     }
                 }
             }

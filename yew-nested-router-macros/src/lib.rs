@@ -477,7 +477,7 @@ fn predicates(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
         match &v.fields {
             Fields::Unit => quote_spanned! { v.span() =>
                 #[allow(unused)]
-                pub fn #fn_name(self) -> bool {
+                pub fn #fn_name(&self) -> bool {
                     matches!(self, Self::#name)
                 }
             },
@@ -485,8 +485,8 @@ fn predicates(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                 let captures = fields.unnamed.iter().map(|_| quote! {_});
                 quote_spanned! { v.span() =>
                     #[allow(unused)]
-                    pub fn #fn_name(self) -> bool {
-                        matches!(self, Self::#name( #(#captures),* ))
+                    pub fn #fn_name(&self) -> bool {
+                        matches!(self, Self::#name( .. ))
                     }
                 }
             }
@@ -494,7 +494,7 @@ fn predicates(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                 quote_spanned! { v.span() =>
                     #[allow(unused)]
                     #[allow(clippy::wrong_self_convention)]
-                    pub fn #fn_name(self) -> bool {
+                    pub fn #fn_name(&self) -> bool {
                         matches!(self, Self::#name{..})
                     }
                 }

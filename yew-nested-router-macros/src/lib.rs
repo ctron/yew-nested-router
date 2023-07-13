@@ -1,8 +1,10 @@
 extern crate core;
 
 use convert_case::{Case, Casing};
-use darling::util::{Flag, Override};
-use darling::{FromField, FromVariant};
+use darling::{
+    util::{Flag, Override},
+    FromField, FromVariant,
+};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
@@ -71,7 +73,7 @@ fn nested_field<P>(
                     field
                         .ident
                         .as_ref()
-                        .map(|i| i.to_string())
+                        .map(ToString::to_string)
                         .unwrap_or_else(|| format!("{}", i))
                 );
             }
@@ -477,16 +479,17 @@ fn predicates(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
         match &v.fields {
             Fields::Unit => quote_spanned! { v.span() =>
                 #[allow(unused)]
+                #[allow(clippy::wrong_self_convention)]
                 pub fn #fn_name(self) -> bool {
                     matches!(self, Self::#name)
                 }
             },
-            Fields::Unnamed(fields) => {
-                let captures = fields.unnamed.iter().map(|_| quote! {_});
+            Fields::Unnamed(_) => {
                 quote_spanned! { v.span() =>
                     #[allow(unused)]
+                    #[allow(clippy::wrong_self_convention)]
                     pub fn #fn_name(self) -> bool {
-                        matches!(self, Self::#name( #(#captures),* ))
+                        matches!(self, Self::#name( .. ))
                     }
                 }
             }

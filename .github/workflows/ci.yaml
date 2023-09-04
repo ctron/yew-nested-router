@@ -18,8 +18,8 @@ jobs:
       matrix:
         toolchain:
           - stable
-          # minimum version for Tokio
-          - "1.63"
+          # minimum version for gloo
+          - "1.65"
 
     steps:
       - uses: actions/checkout@v3

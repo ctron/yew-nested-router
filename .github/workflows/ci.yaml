@@ -18,8 +18,8 @@ jobs:
       matrix:
         toolchain:
           - stable
-          # minimum version for Yew
-          - "1.60"
+          # minimum version for Tokio
+          - "1.63"
 
     steps:
       - uses: actions/checkout@v3

@@ -12,6 +12,8 @@ pub struct RouterContext<T>
 where
     T: Target,
 {
+    /// The base URL of the page
+    pub(crate) base: Rc<String>,
     pub(crate) scope: Rc<ScopeContext<T>>,
     // The active target
     pub active_target: Option<T>,
@@ -24,6 +26,13 @@ where
     /// Push a new state to the history. This changes the current target, but doesn't leave the page.
     pub fn push(&self, target: T) {
         self.scope.push(target);
+    }
+
+    /// Render the path of target.
+    ///
+    /// This includes the parenting scopes as well as the "base" URL of the document.
+    pub fn render_target(&self, target: T) -> String {
+        self.scope.collect(target)
     }
 
     /// Check if the provided target is the active target
@@ -120,7 +129,7 @@ pub struct Router<T: Target> {
     scope: Rc<ScopeContext<T>>,
     router: RouterContext<T>,
 
-    base: String,
+    base: Rc<String>,
 }
 
 impl<T> Component for Router<T>
@@ -135,12 +144,13 @@ where
 
         let cb = ctx.link().callback(Msg::RouteChanged);
 
-        let base = ctx
-            .props()
-            .base
-            .clone()
-            .or_else(|| base::eval_base())
-            .unwrap_or_else(|| "".into());
+        let base = Rc::new(
+            ctx.props()
+                .base
+                .clone()
+                .or_else(base::eval_base)
+                .unwrap_or_default(),
+        );
 
         let target =
             Self::parse_location(&base, history.location()).or_else(|| ctx.props().default.clone());
@@ -152,7 +162,7 @@ where
             })
         };
 
-        let (scope, router) = Self::build_context(&target, ctx);
+        let (scope, router) = Self::build_context(base.clone(), &target, ctx);
 
         Self {
             history,
@@ -179,17 +189,8 @@ where
             }
             Msg::ChangeTarget(target) => {
                 // log::debug!("Pushing state: {:?}", request.path);
-                let route = format!(
-                    "{}/{}",
-                    self.base,
-                    target
-                        .render_path()
-                        .into_iter()
-                        .map(|segment| urlencoding::encode(&segment).to_string())
-                        .collect::<Vec<_>>()
-                        .join("/")
-                );
-                log::debug!("Push URL: {route}");
+                let route = Self::render_target(&self.base, &target);
+                // log::debug!("Push URL: {route}");
                 self.history.push(route);
             }
         }
@@ -217,6 +218,19 @@ where
 }
 
 impl<T: Target> Router<T> {
+    fn render_target(base: &str, target: &T) -> String {
+        format!(
+            "{}/{}",
+            base,
+            target
+                .render_path()
+                .into_iter()
+                .map(|segment| urlencoding::encode(&segment).to_string())
+                .collect::<Vec<_>>()
+                .join("/")
+        )
+    }
+
     fn parse_location(base: &str, location: Location) -> Option<T> {
         // get the current path
         let path = location.path();
@@ -226,7 +240,7 @@ impl<T: Target> Router<T> {
         }
         // split off the prefix
         let (_, path) = path.split_at(base.len());
-        log::debug!("Path: {path}");
+        // log::debug!("Path: {path}");
 
         // parse into path segments
         let path: Result<Vec<Cow<str>>, _> = path
@@ -243,29 +257,35 @@ impl<T: Target> Router<T> {
         };
 
         // parse the path into a target
-        log::debug!("Path: {path:?}");
+        // log::debug!("Path: {path:?}");
         let target = T::parse_path(&path);
-        log::debug!("New target: {target:?}");
+        // log::debug!("New target: {target:?}");
 
         // done
         target
     }
 
     fn sync_context(&mut self, ctx: &Context<Self>) {
-        let (scope, router) = Self::build_context(&self.target, ctx);
+        let (scope, router) = Self::build_context(self.base.clone(), &self.target, ctx);
         self.scope = scope;
         self.router = router;
     }
 
     fn build_context(
+        base: Rc<String>,
         target: &Option<T>,
         ctx: &Context<Self>,
     ) -> (Rc<ScopeContext<T>>, RouterContext<T>) {
         let scope = Rc::new(ScopeContext {
             upwards: ctx.link().callback(Msg::ChangeTarget),
+            collect: {
+                let base = base.clone();
+                Callback::from(move |target| Self::render_target(&base, &target))
+            },
         });
 
         let router = RouterContext {
+            base,
             scope: scope.clone(),
             active_target: target.clone(),
         };

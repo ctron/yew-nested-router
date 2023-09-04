@@ -1,5 +1,6 @@
-use crate::prelude::use_router;
-use crate::target::Target;
+use crate::prelude::{use_router, Target};
+use gloo_events::{EventListener, EventListenerOptions};
+use web_sys::HtmlElement;
 use yew::prelude::*;
 
 /// Properties for the [`Link`] component.
@@ -23,6 +24,10 @@ where
     /// The element to render, default to `<a>`.
     #[prop_or_else(default::element)]
     pub element: String,
+
+    /// Suppress rendering the "href" attribute in any case.
+    #[prop_or_default]
+    pub suppress_href: bool,
 
     /// CSS classes which are always present.
     #[prop_or_default]
@@ -51,7 +56,7 @@ where
 {
     let router = use_router::<T>().expect("Need Router or Nested component");
 
-    let mut classes = props.class.clone();
+    let mut class = props.class.clone();
 
     let active = match props.any {
         true => {
@@ -69,17 +74,45 @@ where
     };
 
     match active {
-        true => classes.extend(props.active.clone()),
-        false => classes.extend(props.inactive.clone()),
+        true => class.extend(props.active.clone()),
+        false => class.extend(props.inactive.clone()),
     }
 
-    let target = props.target.clone();
-    let onclick = Callback::from(move |_| router.push(target.clone()));
+    let href = match props.element.as_str() {
+        "a" if !props.suppress_href => Some(router.render_target(props.target.clone())),
+        _ => None,
+    };
+
+    let node_ref = use_node_ref();
+
+    use_effect_with_deps(
+        |(router, target, node_ref)| {
+            let mut listener = None;
+
+            if let Some(element) = node_ref.cast::<HtmlElement>() {
+                let router = router.clone();
+                let target = target.clone();
+                listener = Some(EventListener::new_with_options(
+                    &element,
+                    "click",
+                    EventListenerOptions::enable_prevent_default(),
+                    move |e| {
+                        e.prevent_default();
+                        router.push(target.clone());
+                    },
+                ));
+            }
+
+            move || drop(listener)
+        },
+        (router, props.target.clone(), node_ref.clone()),
+    );
 
     html!(
         <@{props.element.clone()}
-            class={classes}
-            {onclick}
+            {class}
+            {href}
+            ref={node_ref}
         >
             { for props.children.iter() }
         </@>

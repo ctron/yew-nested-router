@@ -8,6 +8,7 @@ where
     C: Target,
 {
     pub(crate) upwards: Callback<C>,
+    pub(crate) collect: Callback<C, String>,
 }
 
 impl<C> ScopeContext<C>
@@ -16,6 +17,10 @@ where
 {
     pub(crate) fn push(&self, target: C) {
         self.upwards.emit(target);
+    }
+
+    pub(crate) fn collect(&self, target: C) -> String {
+        self.collect.emit(target)
     }
 }
 
@@ -47,26 +52,34 @@ where
     let Mapper { downwards, upwards } = props.mapper.emit(());
 
     let scope = use_memo(
-        |(parent, upwards)| {
-            let parent = parent.upwards.clone();
-            let upwards = upwards.clone();
-            ScopeContext {
-                upwards: Callback::from(move |child: C| {
+        |(parent, upwards)| ScopeContext {
+            upwards: {
+                let parent = parent.upwards.clone();
+                let upwards = upwards.clone();
+                Callback::from(move |child: C| {
                     parent.emit(upwards.emit(child));
-                }),
-            }
+                })
+            },
+            collect: {
+                let parent = parent.collect.clone();
+                let upwards = upwards.clone();
+                Callback::from(move |child: C| parent.emit(upwards.emit(child)))
+            },
         },
         (parent.clone(), upwards),
     );
 
+    let base = router.base.clone();
     let active = router.active();
 
     let context = use_memo(
-        |(scope, target)| RouterContext {
+        |(base, scope, target)| RouterContext {
+            base: base.clone(),
             scope: scope.clone(),
             active_target: target.clone(),
         },
         (
+            base,
             scope.clone(),
             active.clone().and_then(|p| downwards.emit(p)),
         ),

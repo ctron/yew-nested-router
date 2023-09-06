@@ -247,3 +247,8 @@ pub mod prelude {
 
     pub use yew_nested_router_macros::Target;
 }
+
+/// Re-export the version of gloo_history we use
+pub use gloo_history as history;
+/// Re-export the history implementation we use
+pub use gloo_history::BrowserHistory as History;

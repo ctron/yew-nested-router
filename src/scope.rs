@@ -51,8 +51,8 @@ where
 
     let Mapper { downwards, upwards } = props.mapper.emit(());
 
-    let scope = use_memo(
-        |(parent, upwards)| ScopeContext {
+    let scope = use_memo((parent.clone(), upwards), |(parent, upwards)| {
+        ScopeContext {
             upwards: {
                 let parent = parent.upwards.clone();
                 let upwards = upwards.clone();
@@ -65,24 +65,23 @@ where
                 let upwards = upwards.clone();
                 Callback::from(move |child: C| parent.emit(upwards.emit(child)))
             },
-        },
-        (parent.clone(), upwards),
-    );
+        }
+    });
 
     let base = router.base.clone();
     let active = router.active();
 
     let context = use_memo(
-        |(base, scope, target)| RouterContext {
-            base: base.clone(),
-            scope: scope.clone(),
-            active_target: target.clone(),
-        },
         (
             base,
             scope.clone(),
             active.clone().and_then(|p| downwards.emit(p)),
         ),
+        |(base, scope, target)| RouterContext {
+            base: base.clone(),
+            scope: scope.clone(),
+            active_target: target.clone(),
+        },
     );
 
     html!(

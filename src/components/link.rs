@@ -85,7 +85,8 @@ where
 
     let node_ref = use_node_ref();
 
-    use_effect_with_deps(
+    use_effect_with(
+        (router, props.target.clone(), node_ref.clone()),
         |(router, target, node_ref)| {
             let mut listener = None;
 
@@ -105,7 +106,6 @@ where
 
             move || drop(listener)
         },
-        (router, props.target.clone(), node_ref.clone()),
     );
 
     html!(

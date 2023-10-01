@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
-yew = { version = "0.20", features = ["csr"] }
+yew = { version = "0.21.0", features = ["csr"] }
 yew-nested-router = { path = "../.." }
 
 wasm-bindgen = "0.2.83"

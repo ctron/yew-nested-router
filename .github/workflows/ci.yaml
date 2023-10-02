@@ -18,8 +18,8 @@ jobs:
       matrix:
         toolchain:
           - stable
-          # minimum version for gloo
-          - "1.65"
+          # minimum version
+          - "1.70"
 
     steps:
       - uses: actions/checkout@v3

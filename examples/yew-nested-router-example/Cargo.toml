@@ -10,3 +10,5 @@ yew-nested-router = { path = "../.." }
 
 wasm-bindgen = "0.2.83"
 wasm-logger = "0.2"
+
+[workspace]

@@ -172,6 +172,8 @@
 //!
 //! **NOTE:** Targets having additional information do not get a mapper automatically created, as
 //! that information might not be known on the lower levels.
+//! In these cases you will have to implement the mapper yourself.
+//! An example is provided for the target `Page::D` in the `examples` folder.
 //!
 //! For a more complete example on nesting, see the full example in the `examples` folder.
 //!

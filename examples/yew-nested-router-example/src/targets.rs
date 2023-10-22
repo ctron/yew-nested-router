@@ -1,4 +1,4 @@
-use yew_nested_router::prelude::Target;
+use yew_nested_router::prelude::{Mapper, Target};
 
 #[derive(Clone, Debug, PartialEq, Eq, Target)]
 pub enum Page {
@@ -15,6 +15,24 @@ pub enum Page {
         #[target(nested)]
         target: C,
     },
+    /// Nested target with custom mapper that captures value
+    D {
+        id: u32,
+        #[target(nested)]
+        target: D,
+    },
+}
+
+impl Page {
+    // We will need to pass the id in from a closure when calling this
+    pub fn mapper_d(id: u32) -> Mapper<Page, D> {
+        let downwards = |page| match page {
+            Page::D { target, .. } => Some(target),
+            _ => None,
+        };
+        let upwards = move |d| Page::D { id, target: d };
+        Mapper::new(downwards, upwards)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Target)]
@@ -46,4 +64,11 @@ pub enum View {
     Overview,
     Details,
     Source,
+}
+
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, Target)]
+pub enum D {
+    #[default]
+    First,
+    Second,
 }

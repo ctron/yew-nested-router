@@ -31,9 +31,12 @@ pub trait Target: Clone + Debug + Eq + 'static {
     fn parse_path(path: &[&str]) -> Option<Self>;
 }
 
+/// Maps a `P`arent target onto a `C`hild target and vice versa.
 #[derive(Debug, PartialEq)]
 pub struct Mapper<P, C> {
+    /// Obtain the child target from the parent
     pub downwards: Callback<P, Option<C>>,
+    /// Obtain the parent target from the child
     pub upwards: Callback<C, P>,
 }
 

@@ -5,12 +5,16 @@ use yew::prelude::*;
 
 /// Properties for the [`Link`] component.
 #[derive(Clone, Debug, PartialEq, Properties)]
-pub struct LinkProps<T>
+pub struct LinkProperties<T>
 where
     T: Target,
 {
-    /// It's children, rendered inside the element.
-    pub children: Children,
+    /// Its content, rendered inside the element.
+    #[prop_or_default]
+    pub children: Html,
+
+    #[prop_or_default]
+    pub id: Option<AttrValue>,
 
     /// The link target.
     pub target: T,
@@ -50,7 +54,7 @@ mod default {
 
 /// A link component, navigating to a [`Target`] on the `onclick` event.
 #[function_component(Link)]
-pub fn link<T>(props: &LinkProps<T>) -> Html
+pub fn link<T>(props: &LinkProperties<T>) -> Html
 where
     T: Target + 'static,
 {
@@ -113,8 +117,9 @@ where
             {class}
             {href}
             ref={node_ref}
+            id={props.id.clone()}
         >
-            { for props.children.iter() }
+            { props.children.clone() }
         </@>
     )
 }

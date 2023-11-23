@@ -2,25 +2,36 @@ use crate::prelude::Target;
 use crate::router::use_router;
 use yew::prelude::*;
 
+/// Properties for [`Active`]
 #[derive(Clone, Debug, PartialEq, Properties)]
-pub struct ActiveProps<T>
+pub struct ActiveProperties<T>
 where
     T: Target,
 {
+    /// The target to check for
     #[prop_or_default]
     pub target: Option<T>,
 
-    pub children: Children,
+    /// Its content
+    #[prop_or_default]
+    pub children: Html,
 
+    #[prop_or_default]
+    pub id: Option<AttrValue>,
+
+    /// The HTML element to use
     #[prop_or_else(default::element)]
     pub element: String,
 
+    /// base classes
     #[prop_or_default]
     pub class: Classes,
 
+    /// additional classes when active
     #[prop_or_default]
     pub active: Classes,
 
+    /// additional classes when inactive
     #[prop_or_default]
     pub inactive: Classes,
 }
@@ -33,7 +44,7 @@ mod default {
 
 /// A style element, allowing to add cass classes based on the target's active state.
 #[function_component(Active)]
-pub fn active<T>(props: &ActiveProps<T>) -> Html
+pub fn active<T>(props: &ActiveProperties<T>) -> Html
 where
     T: Target,
 {
@@ -52,8 +63,11 @@ where
     }
 
     html!(
-        <@{props.element.clone()} {class}>
-            { for props.children.iter() }
+        <@{props.element.clone()}
+            {class}
+            id={props.id.clone()}
+        >
+            { props.children.clone() }
         </@>
     )
 }

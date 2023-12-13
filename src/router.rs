@@ -276,7 +276,7 @@ impl<T: Target> Router<T> {
             .split('/')
             .skip(1)
             // urldecode in the process
-            .map(|segment| urlencoding::decode(segment))
+            .map(urlencoding::decode)
             .collect();
 
         // get a path, or return none if we had an urldecode error
@@ -286,12 +286,7 @@ impl<T: Target> Router<T> {
         };
 
         // parse the path into a target
-        // log::debug!("Path: {path:?}");
-        let target = T::parse_path(&path);
-        // log::debug!("New target: {target:?}");
-
-        // done
-        target
+        T::parse_path(&path)
     }
 
     fn sync_context(&mut self, ctx: &Context<Self>) {

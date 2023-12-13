@@ -34,7 +34,7 @@
 //! # use yew::prelude::*;
 //! # use yew_nested_router::prelude::*;
 //! # #[derive(Clone, Debug, PartialEq, Eq, Target)]
-//! # pub enum AppRoute { Index };
+//! # pub enum AppRoute { Index }
 //! # #[function_component(MyContent)] fn my_content() -> Html { html!() }
 //! #[function_component(MyApp)]
 //! pub fn my_app() -> Html {

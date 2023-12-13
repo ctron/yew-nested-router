@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 log = "0.4"
+gloo-utils = "0.2"
 yew = { version = "0.21", features = ["csr"] }
 yew-nested-router = { path = "../.." }
 

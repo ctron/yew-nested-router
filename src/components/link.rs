@@ -1,5 +1,6 @@
 use crate::prelude::{use_router, Target};
 use gloo_events::{EventListener, EventListenerOptions};
+use std::rc::Rc;
 use web_sys::HtmlElement;
 use yew::prelude::*;
 
@@ -18,6 +19,10 @@ where
 
     /// The link target.
     pub target: T,
+
+    /// A state to push, if present
+    #[prop_or_default]
+    pub state: Option<AttrValue>,
 
     #[prop_or_default]
     pub any: bool,
@@ -90,20 +95,29 @@ where
     let node_ref = use_node_ref();
 
     use_effect_with(
-        (router, props.target.clone(), node_ref.clone()),
-        |(router, target, node_ref)| {
+        (
+            router,
+            props.target.clone(),
+            props.state.clone(),
+            node_ref.clone(),
+        ),
+        |(router, target, state, node_ref)| {
             let mut listener = None;
 
             if let Some(element) = node_ref.cast::<HtmlElement>() {
                 let router = router.clone();
                 let target = target.clone();
+                let state = state.clone();
                 listener = Some(EventListener::new_with_options(
                     &element,
                     "click",
                     EventListenerOptions::enable_prevent_default(),
                     move |e| {
                         e.prevent_default();
-                        router.push(target.clone());
+                        router.push_with(
+                            target.clone(),
+                            state.clone().map(|s| Rc::new(s.to_string())),
+                        );
                     },
                 ));
             }

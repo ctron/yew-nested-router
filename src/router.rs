@@ -1,5 +1,5 @@
 use crate::base;
-use crate::scope::ScopeContext;
+use crate::scope::{NavigationTarget, ScopeContext};
 use crate::target::Target;
 use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
 use std::borrow::Cow;
@@ -26,6 +26,10 @@ where
     /// Push a new state to the history. This changes the current target, but doesn't leave the page.
     pub fn push(&self, target: T) {
         self.scope.push(target);
+    }
+
+    pub fn push_with(&self, target: T, state: impl Into<Option<Rc<String>>>) {
+        self.scope.push_with(target, state);
     }
 
     /// Render the path of target.
@@ -117,7 +121,7 @@ where
 #[doc(hidden)]
 pub enum Msg<T: Target> {
     RouteChanged(Location),
-    ChangeTarget(T),
+    ChangeTarget(NavigationTarget<T>),
 }
 
 /// Top-level router component.
@@ -188,10 +192,13 @@ where
                 }
             }
             Msg::ChangeTarget(target) => {
-                // log::debug!("Pushing state: {:?}", request.path);
-                let route = Self::render_target(&self.base, &target);
-                // log::debug!("Push URL: {route}");
-                self.history.push(route);
+                let route = Self::render_target(&self.base, &target.target);
+                log::debug!("Push URL: {route}");
+                log::debug!("Push State: {:?}", target.state);
+                match target.state {
+                    None => self.history.push(route),
+                    Some(state) => self.history.push_with_state(route, state),
+                }
             }
         }
 

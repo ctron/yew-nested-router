@@ -1,13 +1,39 @@
 use crate::router::RouterContext;
 use crate::target::{Mapper, Target};
+use std::rc::Rc;
 use yew::prelude::*;
+
+#[derive(Debug)]
+pub struct NavigationTarget<T>
+where
+    T: Target,
+{
+    pub target: T,
+    pub state: Option<Rc<String>>,
+}
+
+impl<T> NavigationTarget<T>
+where
+    T: Target,
+{
+    pub fn map<F, U>(self, f: F) -> NavigationTarget<U>
+    where
+        F: FnOnce(T) -> U,
+        U: Target,
+    {
+        NavigationTarget {
+            target: f(self.target),
+            state: self.state,
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScopeContext<C>
 where
     C: Target,
 {
-    pub(crate) upwards: Callback<C>,
+    pub(crate) upwards: Callback<NavigationTarget<C>>,
     pub(crate) collect: Callback<C, String>,
 }
 
@@ -16,7 +42,17 @@ where
     C: Target,
 {
     pub(crate) fn push(&self, target: C) {
-        self.upwards.emit(target);
+        self.upwards.emit(NavigationTarget {
+            target,
+            state: None,
+        });
+    }
+
+    pub(crate) fn push_with(&self, target: C, state: impl Into<Option<Rc<String>>>) {
+        self.upwards.emit(NavigationTarget {
+            target,
+            state: state.into(),
+        })
     }
 
     pub(crate) fn collect(&self, target: C) -> String {
@@ -56,8 +92,8 @@ where
             upwards: {
                 let parent = parent.upwards.clone();
                 let upwards = upwards.clone();
-                Callback::from(move |child: C| {
-                    parent.emit(upwards.emit(child));
+                Callback::from(move |child: NavigationTarget<C>| {
+                    parent.emit(child.map(|child| upwards.emit(child)));
                 })
             },
             collect: {

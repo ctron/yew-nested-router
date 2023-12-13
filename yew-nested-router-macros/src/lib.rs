@@ -67,6 +67,7 @@ fn nested_field<P>(
                 return (values, Some(field));
             }
         } else {
+            #[allow(clippy::collapsible_else_if)]
             if opts.nested.is_present() {
                 panic!(
                     "Only the last field can be a nested target: {}",
@@ -148,14 +149,14 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 }
 
 /// generate iterators for capturing and rendering values
-fn capture_values<'f, P, F>(
+fn capture_values<P, F>(
     expect_target: bool,
-    fields: &'f Punctuated<Field, P>,
+    fields: &Punctuated<Field, P>,
     skip_nested: TokenStream,
     push: F,
 ) -> (
-    impl Iterator<Item = TokenStream> + 'f,
-    impl Iterator<Item = TokenStream> + 'f,
+    impl Iterator<Item = TokenStream> + '_,
+    impl Iterator<Item = TokenStream> + '_,
 )
 where
     F: Fn(&Ident) -> TokenStream + 'static,
@@ -188,7 +189,7 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
         let name = &v.ident;
 
         let opts = Opts::from_variant(v).expect("Unable to parse options");
-        let disc = to_discriminator(&v, &opts);
+        let disc = to_discriminator(v, &opts);
 
         match &v.fields {
             // plain route
@@ -235,7 +236,7 @@ fn parse_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
         let name = &v.ident;
 
         let opts = Opts::from_variant(v).expect("Unable to parse options");
-        let value = to_discriminator(&v, &opts);
+        let value = to_discriminator(v, &opts);
 
         match &v.fields {
             Fields::Unit => {
@@ -244,20 +245,20 @@ fn parse_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                 }
             }
             Fields::Unnamed(fields) => parse_rules(
-                &v,
+                v,
                 true,
                 &fields.unnamed,
-                |_, cap| from_str(&cap),
+                |_, cap| from_str(cap),
                 |_, target| quote!(#target),
                 |name, values, target| quote!(Some(Self::#name(#(#values, )* #target))),
             ),
             Fields::Named(fields) => parse_rules(
-                &v,
+                v,
                 false,
                 &fields.named,
                 |name, cap| {
                     let name = name.expect("Must have a name");
-                    let from = from_str(&cap);
+                    let from = from_str(cap);
                     quote!(#name: #from)
                 },
                 |name, target| {
@@ -288,7 +289,7 @@ where
     let (values, nested) = nested_field(expect_target, fields);
 
     let opts = Opts::from_variant(v).expect("Unable to parse options");
-    let disc = to_discriminator(&v, &opts);
+    let disc = to_discriminator(v, &opts);
 
     let (captures, values): (Vec<_>, Vec<_>) = values
         .iter()
@@ -308,7 +309,7 @@ where
         Some(nested) => {
             let t = &nested.ty;
 
-            let field_opts = FieldOpts::from_field(&nested).expect("Unable to parse field options");
+            let field_opts = FieldOpts::from_field(nested).expect("Unable to parse field options");
 
             let default = match &field_opts.default {
                 Some(Override::Inherit) => {

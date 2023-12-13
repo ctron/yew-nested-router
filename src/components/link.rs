@@ -1,6 +1,6 @@
 use crate::prelude::{use_router, Target};
+use crate::state::State;
 use gloo_events::{EventListener, EventListenerOptions};
-use std::rc::Rc;
 use web_sys::HtmlElement;
 use yew::prelude::*;
 
@@ -22,7 +22,7 @@ where
 
     /// A state to push, if present
     #[prop_or_default]
-    pub state: Option<AttrValue>,
+    pub state: State,
 
     #[prop_or_default]
     pub any: bool,
@@ -37,6 +37,10 @@ where
     /// Suppress rendering the "href" attribute in any case.
     #[prop_or_default]
     pub suppress_href: bool,
+
+    /// Suppress rendering the state to the "hash" of the "href".
+    #[prop_or_default]
+    pub suppress_hash: bool,
 
     /// CSS classes which are always present.
     #[prop_or_default]
@@ -88,7 +92,9 @@ where
     }
 
     let href = match props.element.as_str() {
-        "a" if !props.suppress_href => Some(router.render_target(props.target.clone())),
+        "a" if !props.suppress_href => {
+            Some(router.render_target_with(props.target.clone(), props.state.clone()))
+        }
         _ => None,
     };
 
@@ -114,10 +120,7 @@ where
                     EventListenerOptions::enable_prevent_default(),
                     move |e| {
                         e.prevent_default();
-                        router.push_with(
-                            target.clone(),
-                            state.clone().map(|s| Rc::new(s.to_string())),
-                        );
+                        router.push_with(target.clone(), state.clone());
                     },
                 ));
             }

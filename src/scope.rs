@@ -1,15 +1,16 @@
 use crate::router::RouterContext;
 use crate::target::{Mapper, Target};
-use std::rc::Rc;
+use wasm_bindgen::JsValue;
 use yew::prelude::*;
 
 #[derive(Debug)]
+#[doc(hidden)]
 pub struct NavigationTarget<T>
 where
     T: Target,
 {
     pub target: T,
-    pub state: Option<Rc<String>>,
+    pub state: JsValue,
 }
 
 impl<T> NavigationTarget<T>
@@ -44,15 +45,12 @@ where
     pub(crate) fn push(&self, target: C) {
         self.upwards.emit(NavigationTarget {
             target,
-            state: None,
+            state: JsValue::null(),
         });
     }
 
-    pub(crate) fn push_with(&self, target: C, state: impl Into<Option<Rc<String>>>) {
-        self.upwards.emit(NavigationTarget {
-            target,
-            state: state.into(),
-        })
+    pub(crate) fn push_with(&self, target: C, state: JsValue) {
+        self.upwards.emit(NavigationTarget { target, state })
     }
 
     pub(crate) fn collect(&self, target: C) -> String {

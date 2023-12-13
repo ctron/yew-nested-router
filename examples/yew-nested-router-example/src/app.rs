@@ -183,6 +183,20 @@ pub fn app() -> Html {
 
             </div>
 
+            <section>
+                <h3>{"Extras"}</h3>
+                <ul>
+                    <li>
+                        <Link<Page>
+                            target={Page::B(B::Two(View::Details))}
+                            state="Hello World!"
+                        >
+                            {"Push to B -> Two -> Details with state"}
+                        </Link<Page>>
+                    </li>
+                </ul>
+            </section>
+
             <footer>
                 <Debug/>
             </footer>

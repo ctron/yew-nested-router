@@ -233,6 +233,7 @@ pub mod target;
 mod base;
 mod router;
 mod scope;
+mod state;
 mod switch;
 
 pub use router::Router;
@@ -244,13 +245,9 @@ pub use yew_nested_router_macros::Target;
 pub mod prelude {
     pub use super::router::*;
     pub use super::scope::*;
+    pub use super::state::*;
     pub use super::switch::*;
     pub use super::target::*;
 
     pub use yew_nested_router_macros::Target;
 }
-
-/// Re-export the version of gloo_history we use
-pub use gloo_history as history;
-/// Re-export the history implementation we use
-pub use gloo_history::BrowserHistory as History;

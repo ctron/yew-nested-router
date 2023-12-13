@@ -1,10 +1,14 @@
 use crate::base;
 use crate::scope::{NavigationTarget, ScopeContext};
+use crate::state::State;
 use crate::target::Target;
-use gloo_history::{AnyHistory, BrowserHistory, History, HistoryListener, Location};
+use gloo_events::EventListener;
+use gloo_utils::window;
 use std::borrow::Cow;
 use std::fmt::Debug;
 use std::rc::Rc;
+use web_sys::Location;
+use yew::html::IntoPropValue;
 use yew::prelude::*;
 
 #[derive(Clone, PartialEq)]
@@ -23,13 +27,14 @@ impl<T> RouterContext<T>
 where
     T: Target,
 {
-    /// Push a new state to the history. This changes the current target, but doesn't leave the page.
+    /// Push a new state to the history. This changes the current page, but doesn't actually leave the page.
     pub fn push(&self, target: T) {
         self.scope.push(target);
     }
 
-    pub fn push_with(&self, target: T, state: impl Into<Option<Rc<String>>>) {
-        self.scope.push_with(target, state);
+    /// Push a new state to the history, allow setting page state at the same time.
+    pub fn push_with(&self, target: T, state: State) {
+        self.scope.push_with(target, state.0);
     }
 
     /// Render the path of target.
@@ -37,6 +42,30 @@ where
     /// This includes the parenting scopes as well as the "base" URL of the document.
     pub fn render_target(&self, target: T) -> String {
         self.scope.collect(target)
+    }
+
+    /// Render the path of target.
+    ///
+    /// This includes the parenting scopes as well as the "base" URL of the document. It also adds the state using the
+    /// hash.
+    pub fn render_target_with(&self, target: T, state: impl IntoPropValue<State>) -> String {
+        let mut result = self.scope.collect(target);
+
+        let state = state.into_prop_value().0;
+        if state.is_null() || state.is_undefined() {
+            // no-op
+        } else if let Some(value) = state.as_string() {
+            result.push('#');
+            result.push_str(&value);
+        } else if let Some(value) = js_sys::JSON::stringify(&state)
+            .ok()
+            .and_then(|s| s.as_string())
+        {
+            result.push('#');
+            result.push_str(&value);
+        }
+
+        result
     }
 
     /// Check if the provided target is the active target
@@ -120,14 +149,17 @@ where
 #[derive(Debug)]
 #[doc(hidden)]
 pub enum Msg<T: Target> {
-    RouteChanged(Location),
+    /// The target was changed
+    ///
+    /// This can happen either by navigating to a new target, or by the history API's popstate event.
+    RouteChanged,
+    /// Change to a new target
     ChangeTarget(NavigationTarget<T>),
 }
 
 /// Top-level router component.
 pub struct Router<T: Target> {
-    history: AnyHistory,
-    _listener: HistoryListener,
+    _listener: EventListener,
     target: Option<T>,
 
     scope: Rc<ScopeContext<T>>,
@@ -144,9 +176,7 @@ where
     type Properties = RouterProps<T>;
 
     fn create(ctx: &Context<Self>) -> Self {
-        let history = AnyHistory::Browser(BrowserHistory::new());
-
-        let cb = ctx.link().callback(Msg::RouteChanged);
+        let cb = ctx.link().callback(|_| Msg::RouteChanged);
 
         let base = Rc::new(
             ctx.props()
@@ -156,20 +186,16 @@ where
                 .unwrap_or_default(),
         );
 
-        let target =
-            Self::parse_location(&base, history.location()).or_else(|| ctx.props().default.clone());
+        let target = Self::parse_location(&base, window().location())
+            .or_else(|| ctx.props().default.clone());
 
-        let listener = {
-            let history = history.clone();
-            history.clone().listen(move || {
-                cb.emit(history.location());
-            })
-        };
+        let listener = EventListener::new(&window(), "popstate", move |_| {
+            cb.emit(gloo_utils::window().location());
+        });
 
         let (scope, router) = Self::build_context(base.clone(), &target, ctx);
 
         Self {
-            history,
             _listener: listener,
             target,
             scope,
@@ -182,8 +208,8 @@ where
         // log::debug!("update: {msg:?}");
 
         match msg {
-            Msg::RouteChanged(location) => {
-                let target = Self::parse_location(&self.base, location)
+            Msg::RouteChanged => {
+                let target = Self::parse_location(&self.base, window().location())
                     .or_else(|| ctx.props().default.clone());
                 if target != self.target {
                     self.target = target;
@@ -193,12 +219,10 @@ where
             }
             Msg::ChangeTarget(target) => {
                 let route = Self::render_target(&self.base, &target.target);
-                log::debug!("Push URL: {route}");
-                log::debug!("Push State: {:?}", target.state);
-                match target.state {
-                    None => self.history.push(route),
-                    Some(state) => self.history.push_with_state(route, state),
-                }
+                // log::debug!("Push URL: {route}");
+                // log::debug!("Push State: {:?}", target.state);
+                let _ = gloo_utils::history().push_state_with_url(&target.state, "", Some(&route));
+                ctx.link().send_message(Msg::RouteChanged)
             }
         }
 
@@ -226,23 +250,21 @@ where
 
 impl<T: Target> Router<T> {
     fn render_target(base: &str, target: &T) -> String {
-        format!(
-            "{}/{}",
-            base,
-            target
-                .render_path()
-                .into_iter()
-                .map(|segment| urlencoding::encode(&segment).to_string())
-                .collect::<Vec<_>>()
-                .join("/")
-        )
+        let path = target
+            .render_path()
+            .into_iter()
+            .map(|segment| urlencoding::encode(&segment).to_string())
+            .collect::<Vec<_>>()
+            .join("/");
+
+        format!("{base}/{path}",)
     }
 
     fn parse_location(base: &str, location: Location) -> Option<T> {
         // get the current path
-        let path = location.path();
+        let path = location.pathname().unwrap_or_default();
         // if the prefix doesn't match, nothing will
-        if !path.starts_with(&base) {
+        if !path.starts_with(base) {
             return None;
         }
         // split off the prefix

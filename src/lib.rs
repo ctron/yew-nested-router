@@ -223,6 +223,15 @@
 //! }
 //! ```
 //!
+//! ## Interoperability
+//!
+//! This implementation makes use of the browser's history API. While it is possible to receive the current state
+//! from the History API, and trigger "back" operations, using [`web_sys::History::push_state`] directly will not
+//! trigger an event and thus no render a different page.
+//!
+//! As `gloo_history` creates its internal type and state system, it is not interoperable with this crate. It still is
+//! possible to use [`gloo_utils::history`] though, which is just a shortcut of getting [`web_sys::History`].
+//!
 //! ## More examples
 //!
 //! See the `examples` folder.
@@ -231,6 +240,7 @@ pub mod components;
 pub mod target;
 
 mod base;
+mod history;
 mod router;
 mod scope;
 mod state;

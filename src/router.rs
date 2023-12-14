@@ -1,8 +1,8 @@
 use crate::base;
+use crate::history::{History, HistoryListener};
 use crate::scope::{NavigationTarget, ScopeContext};
 use crate::state::State;
 use crate::target::Target;
-use gloo_events::EventListener;
 use gloo_utils::window;
 use std::borrow::Cow;
 use std::fmt::Debug;
@@ -159,7 +159,7 @@ pub enum Msg<T: Target> {
 
 /// Top-level router component.
 pub struct Router<T: Target> {
-    _listener: EventListener,
+    _listener: HistoryListener,
     target: Option<T>,
 
     scope: Rc<ScopeContext<T>>,
@@ -189,8 +189,8 @@ where
         let target = Self::parse_location(&base, window().location())
             .or_else(|| ctx.props().default.clone());
 
-        let listener = EventListener::new(&window(), "popstate", move |_| {
-            cb.emit(gloo_utils::window().location());
+        let listener = History::listener(move || {
+            cb.emit(window().location());
         });
 
         let (scope, router) = Self::build_context(base.clone(), &target, ctx);
@@ -205,8 +205,6 @@ where
     }
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
-        // log::debug!("update: {msg:?}");
-
         match msg {
             Msg::RouteChanged => {
                 let target = Self::parse_location(&self.base, window().location())
@@ -219,9 +217,7 @@ where
             }
             Msg::ChangeTarget(target) => {
                 let route = Self::render_target(&self.base, &target.target);
-                // log::debug!("Push URL: {route}");
-                // log::debug!("Push State: {:?}", target.state);
-                let _ = gloo_utils::history().push_state_with_url(&target.state, "", Some(&route));
+                let _ = History::push_state(target.state, &route);
                 ctx.link().send_message(Msg::RouteChanged)
             }
         }

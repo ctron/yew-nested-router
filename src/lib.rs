@@ -246,11 +246,11 @@ mod scope;
 mod state;
 mod switch;
 
+pub use history::History;
 pub use router::Router;
 pub use scope::Scope;
 pub use switch::Switch;
 pub use yew_nested_router_macros::Target;
-pub use history::History;
 
 /// Common includes.
 pub mod prelude {

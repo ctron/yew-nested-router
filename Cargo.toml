@@ -1,7 +1,7 @@
 [package]
 name = "yew-nested-router"
 description = "A router for Yew which supports nesting"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2021"
 authors = ["Jens Reimann <jreimann@redhat.com>"]
 license = "Apache-2.0"
@@ -22,7 +22,7 @@ urlencoding = "2"
 wasm-bindgen = "0.2"
 yew = "0.21"
 
-yew-nested-router-macros = { version = "0.6.2", path = "yew-nested-router-macros" }
+yew-nested-router-macros = { version = "0.6.3", path = "yew-nested-router-macros" }
 
 web-sys = { version = "0.3", features = [
     "HtmlBaseElement",

@@ -48,7 +48,7 @@ impl IntoPropValue<State> for String {
 
 impl IntoPropValue<State> for &String {
     fn into_prop_value(self) -> State {
-        State(JsValue::from_str(&self))
+        State(JsValue::from_str(self))
     }
 }
 

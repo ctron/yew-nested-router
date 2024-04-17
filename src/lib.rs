@@ -209,9 +209,9 @@
 //!   html!(
 //!     <>
 //!       <ul>
-//!         <li><Link<AppRoute> target={AppRoute::Index}>{"Index"}</Link<AppRoute>></li>
-//!         <li><Link<AppRoute> target={AppRoute::Foo(Details::Overview)}>{"Foo"}</Link<AppRoute>></li>
-//!         <li><Link<AppRoute> target={AppRoute::Bar{ id: "".into(), details: Details::Overview}}>{"Bar"}</Link<AppRoute>></li>
+//!         <li><Link<AppRoute> to={AppRoute::Index}>{"Index"}</Link<AppRoute>></li>
+//!         <li><Link<AppRoute> to={AppRoute::Foo(Details::Overview)}>{"Foo"}</Link<AppRoute>></li>
+//!         <li><Link<AppRoute> to={AppRoute::Bar{ id: "".into(), details: Details::Overview}}>{"Bar"}</Link<AppRoute>></li>
 //!       </ul>
 //!       <Switch<AppRoute> render={|target|match target {
 //!         AppRoute::Index => html!(<Index/>),

@@ -17,8 +17,8 @@ where
     #[prop_or_default]
     pub id: Option<AttrValue>,
 
-    /// The link target.
-    pub target: T,
+    /// The link target route.
+    pub to: T,
 
     /// A state to push, if present
     #[prop_or_default]
@@ -82,7 +82,7 @@ where
                 .clone()
                 .map(|t| predicate.emit(t))
                 .unwrap_or(false),
-            None => router.is_same(&props.target),
+            None => router.is_same(&props.to),
         },
     };
 
@@ -93,7 +93,7 @@ where
 
     let href = match props.element.as_str() {
         "a" if !props.suppress_href => {
-            Some(router.render_target_with(props.target.clone(), props.state.clone()))
+            Some(router.render_target_with(props.to.clone(), props.state.clone()))
         }
         _ => None,
     };
@@ -103,16 +103,16 @@ where
     use_effect_with(
         (
             router,
-            props.target.clone(),
+            props.to.clone(),
             props.state.clone(),
             node_ref.clone(),
         ),
-        |(router, target, state, node_ref)| {
+        |(router, to, state, node_ref)| {
             let mut listener = None;
 
             if let Some(element) = node_ref.cast::<HtmlElement>() {
                 let router = router.clone();
-                let target = target.clone();
+                let to = to.clone();
                 let state = state.clone();
                 listener = Some(EventListener::new_with_options(
                     &element,
@@ -120,7 +120,7 @@ where
                     EventListenerOptions::enable_prevent_default(),
                     move |e| {
                         e.prevent_default();
-                        router.push_with(target.clone(), state.clone());
+                        router.push_with(to.clone(), state.clone());
                     },
                 ));
             }

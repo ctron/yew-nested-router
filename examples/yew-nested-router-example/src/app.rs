@@ -20,10 +20,10 @@ fn render(page: Page) -> Html {
                     <h3>{ "B" }</h3>
                     <nav>
                         <ul>
-                            <li><Link<Page> target={Page::Index}>{ "Home" }</Link<Page>></li>
-                            <li><Link<B> active="active" target={B::One}>{ "One" }</Link<B>></li>
-                            <li><Link<B> active="active" predicate={B::is_two} target={B::Two(View::Overview)}>{ "Two" }</Link<B>></li>
-                            <li><Link<B> active="active" predicate={B::is_three} target={B::Three(View::Overview)}>{ "Three" }</Link<B>></li>
+                            <li><Link<Page> to={Page::Index}>{ "Home" }</Link<Page>></li>
+                            <li><Link<B> active="active" to={B::One}>{ "One" }</Link<B>></li>
+                            <li><Link<B> active="active" predicate={B::is_two} to={B::Two(View::Overview)}>{ "Two" }</Link<B>></li>
+                            <li><Link<B> active="active" predicate={B::is_three} to={B::Three(View::Overview)}>{ "Three" }</Link<B>></li>
                         </ul>
                     </nav>
                 </Section>
@@ -35,7 +35,7 @@ fn render(page: Page) -> Html {
                 { format!("C ({value})") }
             </h3>
             <nav>
-                <Link<Page> target={Page::B(B::Two(View::Details))}>{ "Jump to Page::B(B::Two(View::Details))" }</Link<Page>>
+                <Link<Page> to={Page::B(B::Two(View::Details))}>{ "Jump to Page::B(B::Two(View::Details))" }</Link<Page>>
             </nav>
         </Section>),
         Page::D { id, target: _target } => html!(
@@ -44,9 +44,9 @@ fn render(page: Page) -> Html {
                     <h3>{ "D" }</h3>
                     <nav>
                         <ul>
-                            <li><Link<Page> target={Page::Index}>{ "Home" }</Link<Page>></li>
-                            <li><Link<D> active="active" predicate={D::is_first} target={D::First}>{ "First" }</Link<D>></li>
-                            <li><Link<D> active="active" predicate={D::is_second} target={D::Second}>{ "Second" }</Link<D>></li>
+                            <li><Link<Page> to={Page::Index}>{ "Home" }</Link<Page>></li>
+                            <li><Link<D> active="active" predicate={D::is_first} to={D::First}>{ "First" }</Link<D>></li>
+                            <li><Link<D> active="active" predicate={D::is_second} to={D::Second}>{ "Second" }</Link<D>></li>
                         </ul>
                     </nav>
                 </Section>
@@ -93,9 +93,9 @@ pub fn view_nav() -> Html {
         <>
             <nav>
                 <ul>
-                    <li><Link<View> active="active" target={View::Overview}>{ "Overview" }</Link<View>></li>
-                    <li><Link<View> active="active" target={View::Details}>{ "Details" }</Link<View>></li>
-                    <li><Link<View> active="active" target={View::Source}>{ "Source" }</Link<View>></li>
+                    <li><Link<View> active="active" to={View::Overview}>{ "Overview" }</Link<View>></li>
+                    <li><Link<View> active="active" to={View::Details}>{ "Details" }</Link<View>></li>
+                    <li><Link<View> active="active" to={View::Source}>{ "Source" }</Link<View>></li>
                 </ul>
             </nav>
         </>
@@ -128,24 +128,24 @@ pub fn app() -> Html {
                         <h2>{"Outside"}</h2>
         
                         <ul>
-                            <li><Link<Page> active="active" target={Page::Index}>{ "Home" }</Link<Page>></li>
-                            <li><Link<Page> active="active" target={Page::A}>{ "A" }</Link<Page>></li>
+                            <li><Link<Page> active="active" to={Page::Index}>{ "Home" }</Link<Page>></li>
+                            <li><Link<Page> active="active" to={Page::A}>{ "A" }</Link<Page>></li>
         
                             <li>
                                 <Scope<Page, B> mapper={Page::mapper_b}>
-                                    <Link<B> active="active" any=true target={B::One}>{ "B" }</Link<B>>
+                                    <Link<B> active="active" any=true to={B::One}>{ "B" }</Link<B>>
                                     <ul>
-                                        <li><Link<Page> active="active" target={Page::B(B::One)}>{ "One" }</Link<Page>></li>
+                                        <li><Link<Page> active="active" to={Page::B(B::One)}>{ "One" }</Link<Page>></li>
                                         <li>
                                             <Scope<B, View> mapper={B::mapper_two}>
-                                                <Link<View> active="active" any=true target={View::Overview}>{ "Two" }</Link<View>>
+                                                <Link<View> active="active" any=true to={View::Overview}>{ "Two" }</Link<View>>
                                                 <ViewNav/>
                                             </Scope<B, View>>
                                         </li>
             
                                         <li>
                                             <Scope<B, View> mapper={B::mapper_three}>
-                                                <Link<View> active="active" predicate={View::any} target={View::Overview}>{ "Three" }</Link<View>>
+                                                <Link<View> active="active" predicate={View::any} to={View::Overview}>{ "Three" }</Link<View>>
                                                 <ViewNav/>
                                             </Scope<B, View>>
                                         </li>
@@ -167,11 +167,11 @@ pub fn app() -> Html {
                     
                             <nav>
                                 <ul> 
-                                    <li><Link<Page> active="active" target={Page::Index}>{ "Home" }</Link<Page>></li>
-                                    <li><Link<Page> active="active" target={Page::A}>{ "A" }</Link<Page>></li>
-                                    <li><Link<Page> active="active" predicate={Page::is_b} target={Page::B(B::One)}>{ "B" }</Link<Page>></li>
-                                    <li><Link<Page> active="active" predicate={Page::is_c} target={Page::C{value: "foo".into(), target: C::Foo{value: "value".to_string()}}}>{ "C (foo)" }</Link<Page>></li>
-                                    <li><Link<Page> active="active" predicate={Page::is_c} target={Page::D {id: 0, target: D::First}}>{ "D (id=0)" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" to={Page::Index}>{ "Home" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" to={Page::A}>{ "A" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" predicate={Page::is_b} to={Page::B(B::One)}>{ "B" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" predicate={Page::is_c} to={Page::C{value: "foo".into(), target: C::Foo{value: "value".to_string()}}}>{ "C (foo)" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" predicate={Page::is_c} to={Page::D {id: 0, target: D::First}}>{ "D (id=0)" }</Link<Page>></li>
                                 </ul>
                             </nav>
                         </div>
@@ -188,7 +188,7 @@ pub fn app() -> Html {
                 <ul>
                     <li>
                         <Link<Page>
-                            target={Page::B(B::Two(View::Details))}
+                            to={Page::B(B::Two(View::Details))}
                             state="Hello World!"
                         >
                             {"Push to B -> Two -> Details with state"}

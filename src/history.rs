@@ -10,7 +10,9 @@ thread_local! {
 /// Handle to a history listener.
 ///
 /// Disposes the listener when dropped.
-pub struct HistoryListener(Rc<CallbackFn>);
+pub struct HistoryListener {
+    _callback: Rc<CallbackFn>,
+}
 
 pub struct History;
 
@@ -88,6 +90,8 @@ impl InnerHistory {
     fn listener<F: Fn() + 'static>(&mut self, f: F) -> HistoryListener {
         let callback = Rc::new(f) as Rc<CallbackFn>;
         self.listeners.borrow_mut().add(Rc::downgrade(&callback));
-        HistoryListener(callback)
+        HistoryListener {
+            _callback: callback,
+        }
     }
 }

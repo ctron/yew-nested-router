@@ -10,7 +10,7 @@ where
 {
     /// The target to check for
     #[prop_or_default]
-    pub target: Option<T>,
+    pub route: Option<T>,
 
     /// Its content
     #[prop_or_default]
@@ -52,8 +52,8 @@ where
 
     let mut class = props.class.clone();
 
-    let active = match &props.target {
-        Some(target) => router.is_same(target),
+    let active = match &props.route {
+        Some(route) => router.is_same(route),
         None => router.active().is_some(),
     };
 

@@ -1,4 +1,4 @@
-use crate::router::RouterContext;
+use crate::router::{RouterContext, StackOperation};
 use crate::target::{Mapper, Target};
 use wasm_bindgen::JsValue;
 use yew::prelude::*;
@@ -34,7 +34,7 @@ pub struct ScopeContext<C>
 where
     C: Target,
 {
-    pub(crate) upwards: Callback<NavigationTarget<C>>,
+    pub(crate) upwards: Callback<(NavigationTarget<C>, StackOperation)>,
     pub(crate) collect: Callback<C, String>,
 }
 
@@ -43,14 +43,32 @@ where
     C: Target,
 {
     pub(crate) fn push(&self, target: C) {
-        self.upwards.emit(NavigationTarget {
-            target,
-            state: JsValue::null(),
-        });
+        self.upwards.emit((
+            (NavigationTarget {
+                target,
+                state: JsValue::null(),
+            }),
+            StackOperation::Push,
+        ));
+    }
+
+    pub(crate) fn replace(&self, target: C) {
+        self.upwards.emit((
+            (NavigationTarget {
+                target,
+                state: JsValue::null(),
+            }),
+            StackOperation::Replace,
+        ));
     }
 
     pub(crate) fn push_with(&self, target: C, state: JsValue) {
-        self.upwards.emit(NavigationTarget { target, state })
+        self.upwards
+            .emit((NavigationTarget { target, state }, StackOperation::Push))
+    }
+    pub(crate) fn replace_with(&self, target: C, state: JsValue) {
+        self.upwards
+            .emit((NavigationTarget { target, state }, StackOperation::Replace))
     }
 
     pub(crate) fn collect(&self, target: C) -> String {
@@ -90,9 +108,11 @@ where
             upwards: {
                 let parent = parent.upwards.clone();
                 let upwards = upwards.clone();
-                Callback::from(move |child: NavigationTarget<C>| {
-                    parent.emit(child.map(|child| upwards.emit(child)));
-                })
+                Callback::from(
+                    move |(target, operation): (NavigationTarget<C>, StackOperation)| {
+                        parent.emit((target.map(|target| upwards.emit(target)), operation));
+                    },
+                )
             },
             collect: {
                 let parent = parent.collect.clone();

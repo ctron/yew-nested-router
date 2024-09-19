@@ -33,6 +33,13 @@ impl History {
     pub fn push_state(state: JsValue, url: &str) -> Result<(), JsValue> {
         INSTANCE.with(|instance| instance.borrow_mut().push_state(state, url))
     }
+    /// Replace current state in the history stack
+    ///
+    /// This will send out events and update the browser's history. Ultimately calling
+    /// [`web_sys::History::replace_state_with_url`].
+    pub fn replace_state(state: JsValue, url: &str) -> Result<(), JsValue> {
+        INSTANCE.with(|instance| instance.borrow_mut().replace_state(state, url))
+    }
 }
 
 type CallbackFn = dyn Fn() + 'static;
@@ -83,6 +90,12 @@ impl InnerHistory {
 
     fn push_state(&mut self, state: JsValue, url: &str) -> Result<(), JsValue> {
         let result = gloo_utils::history().push_state_with_url(&state, "", Some(url));
+        self.listeners.borrow_mut().notify();
+        result
+    }
+
+    fn replace_state(&mut self, state: JsValue, url: &str) -> Result<(), JsValue> {
+        let result = gloo_utils::history().replace_state_with_url(&state, "", Some(url));
         self.listeners.borrow_mut().notify();
         result
     }

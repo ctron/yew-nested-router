@@ -31,10 +31,18 @@ where
     pub fn push(&self, target: T) {
         self.scope.push(target);
     }
+    /// Replace current state on the history. This changes the current page, but doesn't actually leave the page.
+    pub fn replace(&self, target: T) {
+        self.scope.replace(target);
+    }
 
     /// Push a new state to the history, allow setting page state at the same time.
     pub fn push_with(&self, target: T, state: State) {
         self.scope.push_with(target, state.0);
+    }
+    /// Replace current state on the history, allow setting page state at the same time.
+    pub fn replace_with(&self, target: T, state: State) {
+        self.scope.replace_with(target, state.0);
     }
 
     /// Render the path of target.
@@ -146,6 +154,12 @@ where
     pub base: Option<String>,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum StackOperation {
+    Push,
+    Replace,
+}
+
 #[derive(Debug)]
 #[doc(hidden)]
 pub enum Msg<T: Target> {
@@ -154,7 +168,7 @@ pub enum Msg<T: Target> {
     /// This can happen either by navigating to a new target, or by the history API's popstate event.
     RouteChanged,
     /// Change to a new target
-    ChangeTarget(NavigationTarget<T>),
+    ChangeTarget(NavigationTarget<T>, StackOperation),
 }
 
 /// Top-level router component.
@@ -215,9 +229,12 @@ where
                     return true;
                 }
             }
-            Msg::ChangeTarget(target) => {
+            Msg::ChangeTarget(target, operation) => {
                 let route = Self::render_target(&self.base, &target.target);
-                let _ = History::push_state(target.state, &route);
+                let _ = match operation {
+                    StackOperation::Push => History::push_state(target.state, &route),
+                    StackOperation::Replace => History::replace_state(target.state, &route),
+                };
                 ctx.link().send_message(Msg::RouteChanged)
             }
         }
@@ -297,7 +314,9 @@ impl<T: Target> Router<T> {
         ctx: &Context<Self>,
     ) -> (Rc<ScopeContext<T>>, RouterContext<T>) {
         let scope = Rc::new(ScopeContext {
-            upwards: ctx.link().callback(Msg::ChangeTarget),
+            upwards: ctx
+                .link()
+                .callback(|(target, operation)| Msg::ChangeTarget(target, operation)),
             collect: {
                 let base = base.clone();
                 Callback::from(move |target| Self::render_target(&base, &target))

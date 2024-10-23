@@ -4,7 +4,6 @@ use crate::scope::{NavigationTarget, ScopeContext};
 use crate::state::State;
 use crate::target::Target;
 use gloo_utils::window;
-use std::borrow::Cow;
 use std::fmt::Debug;
 use std::rc::Rc;
 use web_sys::Location;
@@ -280,26 +279,8 @@ impl<T: Target> Router<T> {
         if !path.starts_with(base) {
             return None;
         }
-        // split off the prefix
-        let (_, path) = path.split_at(base.len());
-        // log::debug!("Path: {path}");
-
-        // parse into path segments
-        let path: Result<Vec<Cow<str>>, _> = path
-            .split('/')
-            .skip(1)
-            // urldecode in the process
-            .map(urlencoding::decode)
-            .collect();
-
-        // get a path, or return none if we had an urldecode error
-        let path = match &path {
-            Ok(path) => path.iter().map(|s| s.as_ref()).collect::<Vec<_>>(),
-            Err(_) => return None,
-        };
-
         // parse the path into a target
-        T::parse_path(&path)
+        T::parse_url(base, path.as_str())
     }
 
     fn sync_context(&mut self, ctx: &Context<Self>) {

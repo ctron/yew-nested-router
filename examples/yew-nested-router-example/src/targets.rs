@@ -54,6 +54,8 @@ impl Default for B {
 pub enum C {
     Foo {
         value: String,
+        #[target(query)]
+        param: String,
     },
     /// variant with both values being actual values
     Bar(String, #[target(value)] usize),

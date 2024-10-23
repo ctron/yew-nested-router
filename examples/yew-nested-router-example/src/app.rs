@@ -170,7 +170,7 @@ pub fn app() -> Html {
                                     <li><Link<Page> active="active" to={Page::Index}>{ "Home" }</Link<Page>></li>
                                     <li><Link<Page> active="active" to={Page::A}>{ "A" }</Link<Page>></li>
                                     <li><Link<Page> active="active" predicate={Page::is_b} to={Page::B(B::One)}>{ "B" }</Link<Page>></li>
-                                    <li><Link<Page> active="active" predicate={Page::is_c} to={Page::C{value: "foo".into(), target: C::Foo{value: "value".to_string()}}}>{ "C (foo)" }</Link<Page>></li>
+                                    <li><Link<Page> active="active" predicate={Page::is_c} to={Page::C{value: "foo".into(), target: C::Foo{value: "value".to_string(),param: "value".to_string()}}}>{ "C (foo)" }</Link<Page>></li>
                                     <li><Link<Page> active="active" predicate={Page::is_c} to={Page::D {id: 0, target: D::First}}>{ "D (id=0)" }</Link<Page>></li>
                                 </ul>
                             </nav>

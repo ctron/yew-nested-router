@@ -5,11 +5,11 @@ use darling::{
     util::{Flag, Override},
     FromField, FromVariant,
 };
-use proc_macro2::{Ident, TokenStream};
-use quote::{format_ident, quote, quote_spanned};
+use proc_macro2::{Ident, Literal, TokenStream};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
     parse_macro_input, punctuated::Punctuated, spanned::Spanned, Data, DataEnum, DeriveInput,
-    Field, Fields, Path, Token, Variant,
+    Field, Fields, Token, Variant,
 };
 
 /// Get the value of the path segment
@@ -23,19 +23,20 @@ fn to_discriminator(variant: &Variant, opts: &Opts) -> String {
         .unwrap_or_else(|| variant.ident.to_string().to_lowercase())
 }
 
-#[derive(FromVariant, Default)]
+#[derive(FromVariant, Default, Debug)]
 #[darling(default, attributes(target))]
 struct Opts {
     index: Flag,
     rename: Option<String>,
 }
 
-#[derive(FromField, Default)]
+#[derive(FromField, Default, Debug)]
 #[darling(default, attributes(target))]
 struct FieldOpts {
     nested: Flag,
     value: Flag,
     default: Option<Override<String>>,
+    query: Option<Override<String>>,
 }
 
 impl FieldOpts {
@@ -51,8 +52,9 @@ impl FieldOpts {
 fn nested_field<P>(
     expect_target: bool,
     fields: &Punctuated<Field, P>,
-) -> (Vec<&Field>, Option<&Field>) {
+) -> (Vec<&Field>, Option<&Field>, Vec<(&Field, Literal)>) {
     let mut values = vec![];
+    let mut query_params = vec![];
 
     for (i, field) in fields.iter().enumerate() {
         let opts = FieldOpts::from_field(field)
@@ -61,29 +63,57 @@ fn nested_field<P>(
 
         let last = i == fields.len() - 1;
 
-        if last {
-            if (expect_target || opts.nested.is_present()) && !opts.value.is_present() {
-                // this is the last field, and it is flagged as nested, we can return now
-                return (values, Some(field));
-            }
-        } else {
-            #[allow(clippy::collapsible_else_if)]
-            if opts.nested.is_present() {
-                panic!(
-                    "Only the last field can be a nested target: {}",
-                    field
-                        .ident
-                        .as_ref()
-                        .map(ToString::to_string)
-                        .unwrap_or_else(|| format!("{}", i))
-                );
-            }
+        if opts.query.is_some() && opts.nested.is_present() {
+            panic!(
+                "A query parameter cannot be nested: {}",
+                field
+                    .ident
+                    .as_ref()
+                    .map(ToString::to_string)
+                    .unwrap_or_else(|| format!("{}", i))
+            );
         }
+        if let Some(query) = opts.query {
+            query_params.push((
+                field,
+                match query {
+                    Override::Inherit => {
+                        let ident = field
+                            .ident
+                            .as_ref()
+                            .expect("anyonymous query parameters needs explizit name");
+                        let mut l = Literal::string(ident.to_string().as_ref());
+                        l.set_span(field.span());
+                        l
+                    }
+                    Override::Explicit(name) => Literal::string(&name),
+                },
+            ));
+        } else {
+            if last {
+                if (expect_target || opts.nested.is_present()) && !opts.value.is_present() {
+                    // this is the last field, and it is flagged as nested, we can return now
+                    return (values, Some(field), query_params);
+                }
+            } else {
+                #[allow(clippy::collapsible_else_if)]
+                if opts.nested.is_present() {
+                    panic!(
+                        "Only the last field can be a nested target: {}",
+                        field
+                            .ident
+                            .as_ref()
+                            .map(ToString::to_string)
+                            .unwrap_or_else(|| format!("{}", i))
+                    );
+                }
+            }
 
-        values.push(field);
+            values.push(field);
+        }
     }
 
-    (values, None)
+    (values, None, query_params)
 }
 
 /// render the full path, this needs to dive into nested entries.
@@ -95,12 +125,15 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             Fields::Unit => {
                 quote_spanned! { v.span() =>
                     Self::#name => {
-                        self.render_self_into(__internal_path);
+                        self.render_self_into(__internal_path,__params);
                     }
                 }
             }
             Fields::Unnamed(fields) => {
-                let (values, nested) = nested_field(true, &fields.unnamed);
+                let (values, nested, query_params) = nested_field(true, &fields.unnamed);
+                if !query_params.is_empty() {
+                    panic!("No anonymous query parameters supported")
+                }
 
                 // expand all values to captures of _, expect if the last one is "nested".
                 let values = values
@@ -110,7 +143,7 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 
                 let nested = match nested.is_some() {
                     true => {
-                        quote! { nested.render_path_into(__internal_path); }
+                        quote! { nested.render_path_into(__internal_path,__params); }
                     }
                     false => {
                         quote! {}
@@ -119,7 +152,7 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 
                 quote_spanned! { v.span() =>
                     Self::#name(#(#values),*) => {
-                        self.render_self_into(__internal_path);
+                        self.render_self_into(__internal_path,__params);
                         #nested
                     }
                 }
@@ -127,19 +160,19 @@ fn render_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             Fields::Named(fields) => {
                 // we capture the nested field as "nested" and then call it
                 let (capture, nested) = match nested_field(false, &fields.named) {
-                    (_, Some(nested)) => {
+                    (_, Some(nested), _) => {
                         let nested = nested.ident.as_ref().expect("Field must have a name");
                         (
                             quote! { #nested: nested, .. },
-                            quote! { nested.render_path_into(__internal_path); },
+                            quote! { nested.render_path_into(__internal_path, __params); },
                         )
                     }
-                    (_, None) => (quote! {..}, quote! {}),
+                    (_, None, _) => (quote! {..}, quote! {}),
                 };
 
                 quote_spanned! { v.span() =>
                     Self::#name{ #capture } => {
-                        self.render_self_into(__internal_path);
+                        self.render_self_into(__internal_path,__params);
                         #nested
                     }
                 }
@@ -161,7 +194,7 @@ fn capture_values<P, F>(
 where
     F: Fn(&Ident) -> TokenStream + 'static,
 {
-    let (values, nested) = nested_field(expect_target, fields);
+    let (values, nested, query_params) = nested_field(expect_target, fields);
 
     let captures = values
         .clone()
@@ -172,15 +205,41 @@ where
             let name = f.ident.as_ref().unwrap_or(&anon);
             quote! { #name }
         })
+        .chain(
+            query_params
+                .clone()
+                .into_iter()
+                .enumerate()
+                .map(|(idx, (f, _))| {
+                    let alias = format_ident!("p{idx}");
+                    if let Some(name) = f.ident.as_ref() {
+                        quote! {#name: #alias}
+                    } else {
+                        quote! {#alias}
+                    }
+                }),
+        )
         .chain(nested.map(|_| skip_nested));
 
-    let values = values.into_iter().enumerate().map(move |(i, f)| {
-        let anon = format_ident!("arg_{}", i);
-        let name = f.ident.as_ref().unwrap_or(&anon);
-        push(name)
-    });
-
+    let values = values
+        .into_iter()
+        .enumerate()
+        .map(move |(i, f)| {
+            let anon = format_ident!("arg_{}", i);
+            let name = f.ident.as_ref().unwrap_or(&anon);
+            push(name)
+        })
+        .chain(
+            query_params
+                .into_iter()
+                .enumerate()
+                .map(|(idx, (_, name))| push_params(&name, &format_ident!("p{idx}"))),
+        );
     (captures, values)
+}
+
+fn push_params(name: &Literal, alias: &Ident) -> TokenStream {
+    quote! {__params.push((#name.into(),yew_nested_router::prelude::parameter_value::ParameterValue::to_parameter_value(#alias)));}
 }
 
 /// rendering (local) target to its path.
@@ -195,14 +254,14 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             // plain route
             Fields::Unit => {
                 quote_spanned! { v.span() =>
-                    Self::#name => { __internal_path.push(#disc.into()); }
+                    Self::#name => { __internal_path.push(#disc.to_string().into()); }
                 }
             }
             // nested route
             Fields::Unnamed(fields) => {
                 let (captures, values) =
                     capture_values(true, &fields.unnamed, quote! { _ }, |name| {
-                        quote! { __internal_path.push(#name.to_string()); }
+                        quote! { __internal_path.push(#name.to_string().into()); }
                     });
 
                 quote_spanned! { v.span() =>
@@ -216,7 +275,7 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
             Fields::Named(fields) => {
                 let (captures, values) =
                     capture_values(false, &fields.named, quote! { .. }, |name| {
-                        quote! { __internal_path.push(#name.to_string()); }
+                        quote! { __internal_path.push(#name.to_string().into()); }
                     });
 
                 quote_spanned! { v.span() =>
@@ -248,9 +307,9 @@ fn parse_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                 v,
                 true,
                 &fields.unnamed,
-                |_, cap| from_str(cap),
+                |_, cap| from_str_expr(cap),
                 |_, target| quote!(#target),
-                |name, values, target| quote!(Some(Self::#name(#(#values, )* #target))),
+                |name, values| quote!(Self::#name(#(#values, )*)),
             ),
             Fields::Named(fields) => parse_rules(
                 v,
@@ -258,14 +317,14 @@ fn parse_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                 &fields.named,
                 |name, cap| {
                     let name = name.expect("Must have a name");
-                    let from = from_str(cap);
+                    let from = from_str_expr(cap);
                     quote!(#name: #from)
                 },
                 |name, target| {
                     let name = name.expect("Must have a name");
                     quote!(#name: #target)
                 },
-                |name, values, target| quote!(Some(Self::#name { #(#values, )* #target})),
+                |name, values| quote!(Self::#name { #(#values, )*}),
             ),
         }
     })
@@ -282,94 +341,104 @@ fn parse_rules<P, F1, F2, F3>(
 where
     F1: Fn(Option<&Ident>, &Ident) -> TokenStream,
     F2: Fn(Option<&Ident>, TokenStream) -> TokenStream,
-    F3: Fn(&Ident, &Vec<TokenStream>, TokenStream) -> TokenStream,
+    F3: Fn(&Ident, &Vec<TokenStream>) -> TokenStream,
 {
     let name = &v.ident;
 
-    let (values, nested) = nested_field(expect_target, fields);
+    let (values, nested, query_params) = nested_field(expect_target, fields);
 
     let opts = Opts::from_variant(v).expect("Unable to parse options");
     let disc = to_discriminator(v, &opts);
 
-    let (captures, values): (Vec<_>, Vec<_>) = values
-        .iter()
-        .enumerate()
-        .map(|(i, f)| {
-            let name = f.ident.as_ref();
-            let cap = f
-                .ident
-                .as_ref()
-                .map(|f| format_ident!("value_{f}"))
-                .unwrap_or_else(|| format_ident!("arg_{i}"));
-            (quote!(#cap), converter(name, &cap))
-        })
-        .unzip();
+    let mut captures: Vec<TokenStream> = vec![];
+    let mut let_matches: Vec<TokenStream> = vec![];
+    let mut patterns: Vec<TokenStream> = vec![];
+    let mut init: Vec<TokenStream> = vec![];
 
-    match nested {
-        Some(nested) => {
-            let t = &nested.ty;
+    for (i, f) in values.iter().enumerate() {
+        let argument = format_ident!("arg_{i}");
+        patterns.push(from_str_expr(&argument));
+        let_matches.push(quote! {Ok(#argument)});
+        init.push(if let Some(name) = f.ident.as_ref() {
+            quote! {#name: #argument}
+        } else {
+            argument.clone().to_token_stream()
+        });
+        captures.push(argument.into_token_stream());
+    }
+    for (idx, (field, parameter_name)) in query_params.into_iter().enumerate() {
+        let argument = format_ident!("param_{idx}");
+        patterns.push(quote! {yew_nested_router::target::parameter_value::ParameterValue::extract_from_params(__query_params,#parameter_name)});
+        let_matches.push(quote! {Some(#argument)});
+        init.push(if let Some(name) = field.ident.as_ref() {
+            quote! {#name: #argument}
+        } else {
+            argument.clone().to_token_stream()
+        });
+    }
+    let default = if let Some(nested) = nested {
+        let t = &nested.ty;
 
-            let field_opts = FieldOpts::from_field(nested).expect("Unable to parse field options");
-
-            let default = match &field_opts.default {
-                Some(Override::Inherit) => {
-                    let init = ctor(
-                        name,
-                        &values,
-                        target_converter(
-                            nested.ident.as_ref(),
-                            quote!(<#t as core::default::Default>::default()),
-                        ),
-                    );
-                    quote! {
-                        [#disc, #(#captures, )*] => #init,
-                    }
+        let field_opts = FieldOpts::from_field(nested).expect("Unable to parse field options");
+        let default_branch = if let Some(default) = &field_opts.default {
+            let default_value = match default {
+                Override::Inherit => {
+                    quote! {Default::default()}
                 }
-                Some(Override::Explicit(default)) => {
-                    let default = syn::parse_str::<Path>(default).expect("Path to function");
-                    let init = ctor(
-                        name,
-                        &values,
-                        target_converter(nested.ident.as_ref(), quote!(#default ())),
-                    );
-                    quote! {
-                        [#disc, #(#captures, )*] => #init,
-                    }
-                }
-                None => {
-                    quote! {}
+                Override::Explicit(initializer) => {
+                    let method_name = Ident::new(initializer, nested.span());
+                    quote! {#method_name()}
                 }
             };
+            let nested_default_initializer = nested
+                .ident
+                .as_ref()
+                .map(|ident| quote! {#ident: #default_value})
+                .unwrap_or(quote! {#default_value});
+            let mut init = init.clone();
+            init.push(nested_default_initializer);
+            let initializer = ctor(name, &init);
 
-            let init = ctor(
-                name,
-                &values,
-                target_converter(nested.ident.as_ref(), quote!(target)),
-            );
-            quote_spanned! { v.span() =>
-                #default
-                [#disc, #(#captures, )* rest@..] => match #t::parse_path(rest) {
-                    Some(target) => #init,
-                    None => None,
+            Some(quote_spanned! { v.span() =>
+                #[allow(unused_parens,irrefutable_let_patterns)]
+                [#disc, #(#captures, )*] => if let (#(#let_matches),*)=(#(#patterns),*) {
+                    Some(#initializer)
+                }else{
+                    None
                 }
-            }
-        }
-        None => {
-            let init = ctor(name, &values, quote!());
-            quote_spanned! { v.span() =>
-                [#disc, #(#captures),*] => #init
-            }
+            })
+        } else {
+            None
+        };
+        let_matches.push(quote! {Some(nested)});
+        patterns.push(quote! {#t::parse_path(rest, __query_params)});
+        init.push(
+            nested
+                .ident
+                .as_ref()
+                .map(|ident| quote! {#ident: nested})
+                .unwrap_or(quote! {nested}),
+        );
+        captures.push(quote! {rest@..});
+        default_branch
+    } else {
+        None
+    };
+    let initializer = ctor(name, &init);
+
+    quote_spanned! { v.span() =>
+        #default
+        #[allow(unused_parens,irrefutable_let_patterns)]
+        [#disc, #(#captures, )*] => if let (#(#let_matches),*)=(#(#patterns),*) {
+            Some(#initializer)
+        }else{
+            None
         }
     }
 }
 
-fn from_str(cap: &Ident) -> TokenStream {
-    quote!({
-        match std::str::FromStr::from_str(#cap) {
-            Ok(v) => v,
-            Err(err) => return None,
-        }
-    })
+fn from_str_expr(cap: &Ident) -> TokenStream {
+    quote! {std::str::FromStr::from_str(#cap)}
 }
 
 /// Mapping of variants to its values.
@@ -411,17 +480,17 @@ fn mappers(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
         match &v.fields {
             Fields::Unit => quote_spanned! { v.span() => },
             Fields::Unnamed(fields) => {
-                let (_, nested ) = nested_field(true, &fields.unnamed);
+                let (_, nested, _) = nested_field(true, &fields.unnamed);
 
                 let mapper = match nested {
                     Some(_) => {
-                        quote!{
+                        quote! {
                             #[allow(unused)]
                             pub fn #mapper_name(_:()) -> yew_nested_router::prelude::Mapper<Self, #types> {
                                 (Self::#map_name, Self::#name).into()
                             }
                         }
-                    },
+                    }
                     None => quote!(),
                 };
 
@@ -445,7 +514,7 @@ fn mappers(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
                         move |s| s.#map_name().map(&f).unwrap_or_default()
                     }
                 }
-            },
+            }
             Fields::Named(_) => quote_spanned! { v.span() =>
                 #[allow(unused)]
                 pub fn #map_name(self) -> Option<#types> {
@@ -512,6 +581,10 @@ fn predicates(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
 
+    render_enum(ident, data).into()
+}
+
+fn render_enum(ident: Ident, data: Data) -> TokenStream {
     let data = match data {
         Data::Enum(e) => e,
         _ => panic!("Derive must be used on enum only"),
@@ -526,19 +599,19 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let output = quote! {
         impl yew_nested_router::target::Target for #ident {
 
-                fn render_self_into(&self, __internal_path: &mut Vec<String>) {
+                fn render_self_into<'a>(&'a self, __internal_path: &mut Vec<std::borrow::Cow<'a, str>>, __params: &mut Vec<(std::borrow::Cow<'a, str>,std::borrow::Cow<'a, str>)>) {
                     match self {
                         #(#render_self ,)*
                     }
                 }
 
-                fn render_path_into(&self, __internal_path: &mut Vec<String>) {
+                fn render_path_into<'a>(&'a self, __internal_path: &mut Vec<std::borrow::Cow<'a, str>>, __params: &mut Vec<(std::borrow::Cow<'a, str>,std::borrow::Cow<'a, str>)>) {
                     match self {
                         #(#render_path ,)*
                     }
                 }
 
-                fn parse_path(__internal_path: &[&str]) -> Option<Self> {
+                fn parse_path(__internal_path: &[&str],__query_params: &[(std::borrow::Cow<str>,std::borrow::Cow<str>)]) -> Option<Self> {
                     match __internal_path {
                         #(#parse_path ,)*
                         _ => None,
@@ -555,6 +628,8 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             pub fn any(self) -> bool { true }
         }
     };
-
-    output.into()
+    output
 }
+
+#[cfg(test)]
+mod test;

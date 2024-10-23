@@ -29,5 +29,8 @@ web-sys = { version = "0.3", features = [
     "Navigator"
 ] }
 
+url = "2.5.2"
+
+
 [workspace.metadata.release]
 tag-name = "v{{version}}"

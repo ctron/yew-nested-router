@@ -1,6 +1,7 @@
 use crate::prelude::{use_router, Target};
 use crate::state::State;
 use gloo_events::{EventListener, EventListenerOptions};
+use log::{error, info};
 use web_sys::HtmlElement;
 use yew::prelude::*;
 
@@ -67,7 +68,18 @@ pub fn link<T>(props: &LinkProperties<T>) -> Html
 where
     T: Target + 'static,
 {
-    let router = use_router::<T>().expect("Need Router or Nested component");
+    info!("Render Link {:?}", props.to);
+    let router = match use_router::<T>() {
+        None => {
+            error!("No router");
+            return html! {"Need Router or Nested component"};
+            //panic!("Need Router or Nested component")
+        }
+        Some(r) => {
+            error!("Has Router");
+            r
+        }
+    };
 
     let mut class = props.class.clone();
 

@@ -176,18 +176,41 @@ pub mod parameter_value {
         fn from_parameter_value(value: &str) -> Option<Self>;
         fn to_parameter_value(&self) -> Cow<str>;
     }
-    impl<V> ParameterValue for V
-    where
-        V: ToString + FromStr,
-    {
-        fn from_parameter_value<'a>(value: &str) -> Option<Self> {
-            V::from_str(value).ok()
+
+    macro_rules! parameter_value_impl {
+        ($($t:ty)*) => {$(
+            impl ParameterValue for $t {
+                fn from_parameter_value<'a>(value: &str) -> Option<Self> {
+                    <$t>::from_str(value).ok()
+                }
+
+                fn to_parameter_value(&self) -> Cow<str> {
+                    self.to_string().into()
+                }
+            }
+        )*}
+    }
+    parameter_value_impl! { isize i8 i16 i32 i64 i128 usize u8 u16 u32 u64 u128 f32 f64}
+
+    impl ParameterValue for Box<str> {
+        fn from_parameter_value(value: &str) -> Option<Self> {
+            Some(value.to_string().into())
         }
 
         fn to_parameter_value(&self) -> Cow<str> {
-            self.to_string().into()
+            Cow::Borrowed(self.as_ref())
         }
     }
+    impl ParameterValue for String {
+        fn from_parameter_value(value: &str) -> Option<Self> {
+            Some(value.to_string())
+        }
+
+        fn to_parameter_value(&self) -> Cow<str> {
+            Cow::Borrowed(self.as_ref())
+        }
+    }
+
     impl<V: ParameterValue> ParameterValues for Box<[V]> {
         fn from_parameter_values<'a, I: Iterator<Item = &'a str>>(iterator: I) -> Option<Self> {
             Some(
@@ -209,6 +232,22 @@ pub mod parameter_value {
 
         fn to_parameter_values(&self) -> Box<[Cow<str>]> {
             self.iter().map(|v| v.to_parameter_value().into()).collect()
+        }
+    }
+    impl<V: ParameterValue> ParameterValue for Option<V> {
+        fn from_parameter_value(value: &str) -> Option<Self> {
+            if value.is_empty() {
+                Some(None)
+            } else {
+                Some(Some(V::from_parameter_value(value)?))
+            }
+        }
+
+        fn to_parameter_value(&self) -> Cow<str> {
+            match self {
+                None => Cow::Borrowed(""),
+                Some(value) => value.to_parameter_value(),
+            }
         }
     }
     /*

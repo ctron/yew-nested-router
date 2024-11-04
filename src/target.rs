@@ -69,7 +69,10 @@ pub trait Target: Clone + Debug + PartialEq + 'static {
     fn parse_url(base: impl TryInto<Url>, path: impl TryInto<Url>) -> Option<Self> {
         let base_url = base.try_into().ok()?;
         let full_url = path.try_into().ok()?;
-        let base_count = base_url.path_segments().iter().count();
+        let base_count = base_url
+            .path_segments()
+            .map(|seg| seg.filter(|s| !s.is_empty()).count())
+            .unwrap_or_default();
         let path_segments = full_url.path_segments();
         let internal_path = path_segments
             .into_iter()

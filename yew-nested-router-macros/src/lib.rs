@@ -240,8 +240,8 @@ where
 
 fn push_params(name: &Literal, alias: &Ident) -> TokenStream {
     quote! {
-        for value in yew_nested_router::prelude::parameter_value::ParameterValue::to_parameter_values(#alias) {
-            __params.push((#name.into(),value));
+        for value in yew_nested_router::prelude::parameter_value::ParameterValue::to_parameter_values(#alias).iter() {
+            __params.push((#name.into(),value.to_string().into()));
         }
     }
 }

@@ -211,11 +211,11 @@ fn test_param_manual() {
                 } => {
                     __internal_path.push("details".into());
                     __internal_path.push(name.to_string().into());
-                    for value in param.to_parameter_values() {
-                        _params.push(("param".into(), value));
+                    for value in param.to_parameter_values().iter() {
+                        _params.push(("param".into(), value.to_string().into()));
                     }
-                    for value in number.to_parameter_values() {
-                        _params.push(("number".into(), value));
+                    for value in number.to_parameter_values().iter() {
+                        _params.push(("number".into(), value.to_string().into()));
                     }
                 }
             }

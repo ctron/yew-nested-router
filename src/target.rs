@@ -155,20 +155,18 @@ where
 
 pub mod parameter_value {
     use std::{borrow::Cow, str::FromStr};
-    pub trait ParameterValues: Sized {
-        fn extract_from_params(params: &[(Cow<str>, Cow<str>)], name: &str) -> Option<Self> {
-            Self::from_parameter_values(
-                params
-                    .iter()
-                    .filter(|(k, _)| k.as_ref() == name)
-                    .map(|(_, v)| v.as_ref()),
-            )
-        }
-        fn from_parameter_values<'a, I: Iterator<Item = &'a str>>(iterator: I) -> Option<Self>;
+
+    pub trait ParameterValue: Sized {
+        fn extract_from_params(params: &[(Cow<str>, Cow<str>)], name: &str) -> Option<Self>;
         fn to_parameter_values(&self) -> Box<[Cow<str>]>;
     }
 
-    pub trait ParameterValue: Sized {
+    pub trait SimpleParameterValue: Sized {
+        fn from_parameter_value(value: &str) -> Option<Self>;
+        fn to_parameter_value(&self) -> Cow<str>;
+    }
+
+    impl<V: SimpleParameterValue> ParameterValue for V {
         fn extract_from_params(params: &[(Cow<str>, Cow<str>)], name: &str) -> Option<Self> {
             params
                 .iter()
@@ -176,13 +174,15 @@ pub mod parameter_value {
                 .filter_map(|(_, v)| Self::from_parameter_value(v.as_ref()))
                 .next()
         }
-        fn from_parameter_value(value: &str) -> Option<Self>;
-        fn to_parameter_value(&self) -> Cow<str>;
+
+        fn to_parameter_values(&self) -> Box<[Cow<str>]> {
+            Box::new([self.to_parameter_value()])
+        }
     }
 
     macro_rules! parameter_value_impl {
         ($($t:ty)*) => {$(
-            impl ParameterValue for $t {
+            impl SimpleParameterValue for $t {
                 fn from_parameter_value<'a>(value: &str) -> Option<Self> {
                     <$t>::from_str(value).ok()
                 }
@@ -193,9 +193,9 @@ pub mod parameter_value {
             }
         )*}
     }
-    parameter_value_impl! { isize i8 i16 i32 i64 i128 usize u8 u16 u32 u64 u128 f32 f64}
+    parameter_value_impl! { isize i8 i16 i32 i64 i128 usize u8 u16 u32 u64 u128 f32 f64 bool}
 
-    impl ParameterValue for Box<str> {
+    impl SimpleParameterValue for Box<str> {
         fn from_parameter_value(value: &str) -> Option<Self> {
             Some(value.to_string().into())
         }
@@ -204,7 +204,7 @@ pub mod parameter_value {
             Cow::Borrowed(self.as_ref())
         }
     }
-    impl ParameterValue for String {
+    impl SimpleParameterValue for String {
         fn from_parameter_value(value: &str) -> Option<Self> {
             Some(value.to_string())
         }
@@ -214,63 +214,37 @@ pub mod parameter_value {
         }
     }
 
-    impl<V: ParameterValue> ParameterValues for Box<[V]> {
-        fn from_parameter_values<'a, I: Iterator<Item = &'a str>>(iterator: I) -> Option<Self> {
+    impl<V: SimpleParameterValue> ParameterValue for Box<[V]> {
+        fn extract_from_params(params: &[(Cow<str>, Cow<str>)], name: &str) -> Option<Self> {
             Some(
-                iterator
-                    .filter_map(|v| V::from_parameter_value(v))
+                params
+                    .iter()
+                    .filter(|(k, _)| k.as_ref() == name)
+                    .filter_map(|(_, v)| V::from_parameter_value(v.as_ref()))
                     .collect(),
             )
-            .filter(|values: &Box<[V]>| values.is_empty())
         }
 
         fn to_parameter_values(&self) -> Box<[Cow<str>]> {
-            self.iter().map(|v| v.to_parameter_value().into()).collect()
+            self.iter().map(|v| v.to_parameter_value()).collect()
         }
     }
-    impl<V: ParameterValue> ParameterValues for Option<V> {
-        fn from_parameter_values<'a, I: Iterator<Item = &'a str>>(iterator: I) -> Option<Self> {
-            Some(iterator.filter_map(|v| V::from_parameter_value(v)).next())
+
+    impl<V: SimpleParameterValue> ParameterValue for Option<V> {
+        fn extract_from_params(params: &[(Cow<str>, Cow<str>)], name: &str) -> Option<Self> {
+            params
+                .iter()
+                .filter(|(k, _)| k.as_ref() == name)
+                .filter_map(|(_, v)| V::from_parameter_value(v.as_ref()))
+                .map(|v| Some(v))
+                .next()
         }
 
         fn to_parameter_values(&self) -> Box<[Cow<str>]> {
-            self.iter().map(|v| v.to_parameter_value().into()).collect()
-        }
-    }
-    impl<V: ParameterValue> ParameterValue for Option<V> {
-        fn from_parameter_value(value: &str) -> Option<Self> {
-            if value.is_empty() {
-                Some(None)
-            } else {
-                Some(Some(V::from_parameter_value(value)?))
-            }
-        }
-
-        fn to_parameter_value(&self) -> Cow<str> {
             match self {
-                None => Cow::Borrowed(""),
-                Some(value) => value.to_parameter_value(),
+                None => Box::new([]),
+                Some(value) => Box::new([value.to_parameter_value()]),
             }
         }
     }
-    /*
-    impl ParameterValue for String {
-        fn from_parameter_values<'a, I: Iterator<Item = &'a str>>(iterator: I) -> Option<Self> {
-            iterator.map(|v| v.to_string()).next()
-        }
-
-        fn to_parameter_values(&self) -> Box<[Cow<str>]> {
-            Box::new([self.as_str().into()])
-        }
-    }
-
-    impl ParameterValue for Box<str> {
-        fn from_parameter_values<'a, I: Iterator<Item = &'a str>>(iterator: I) -> Option<Self> {
-            iterator.map(|v| v.into()).next()
-        }
-
-        fn to_parameter_values(&self) -> Box<[Cow<str>]> {
-            Box::new([self.as_ref().into()])
-        }
-    }*/
 }

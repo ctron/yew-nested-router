@@ -211,10 +211,12 @@ fn test_param_manual() {
                 } => {
                     __internal_path.push("details".into());
                     __internal_path.push(name.to_string().into());
-                    _params.push(("param".into(), yew_nested_router::prelude::parameter_value::ParameterValue::to_parameter_value(
-                        param,
-                    )));
-                    _params.push(("number".into(), number.to_parameter_value()));
+                    for value in param.to_parameter_values() {
+                        _params.push(("param".into(), value));
+                    }
+                    for value in number.to_parameter_values() {
+                        _params.push(("number".into(), value));
+                    }
                 }
             }
         }

@@ -18,26 +18,37 @@ fn test_simple() {
                 Index(ApplicationContext),
             }
     };
-    let input: ItemEnum = parse_quote! {
-    #[derive(Clone, Debug, PartialEq, Eq, Target)]
-    pub enum AppRoute {
-      #[target(index)]
-      Index,
-      Foo(#[target(default)] Details),
-      Bar {
-        id: String,
-        #[target(nested, default)]
-        details: Details,
-      },
-            Params{
-                #[target(query)]
-                number1: f32,
-                #[target(query)]
-                number2: u8,
-            }
-    }
-       };
+    generate_enum(parse_quote!(
+        #[derive(Clone, Debug, PartialEq, Eq, Target, Default)]
+        pub enum Details {
+            #[default]
+            D1,
+            D2,
+        }
+    ));
 
+    generate_enum(parse_quote! {
+     #[derive(Clone, Debug, PartialEq, Target)]
+     pub enum AppRoute {
+       #[target(index)]
+       Index,
+       Foo(#[target(default)] Details),
+       Bar {
+         id: String,
+         #[target(nested, default)]
+         details: Details,
+       },
+             Params{
+                 #[target(query)]
+                 number1: f32,
+                 #[target(query)]
+                 number2: u8,
+             }
+     }
+    });
+}
+
+fn generate_enum(input: ItemEnum) {
     let mut token_stream = input.to_token_stream();
     let additional_tokens = crate::render_enum(
         input.ident,

@@ -239,7 +239,11 @@ where
 }
 
 fn push_params(name: &Literal, alias: &Ident) -> TokenStream {
-    quote! {__params.push((#name.into(),yew_nested_router::prelude::parameter_value::ParameterValue::to_parameter_value(#alias)));}
+    quote! {
+        for value in yew_nested_router::prelude::parameter_value::ParameterValue::to_parameter_values(#alias) {
+            __params.push((#name.into(),value));
+        }
+    }
 }
 
 /// rendering (local) target to its path.

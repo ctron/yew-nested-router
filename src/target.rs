@@ -232,12 +232,13 @@ pub mod parameter_value {
 
     impl<V: SimpleParameterValue> ParameterValue for Option<V> {
         fn extract_from_params(params: &[(Cow<str>, Cow<str>)], name: &str) -> Option<Self> {
-            params
-                .iter()
-                .filter(|(k, _)| k.as_ref() == name)
-                .filter_map(|(_, v)| V::from_parameter_value(v.as_ref()))
-                .map(|v| Some(v))
-                .next()
+            Some(
+                params
+                    .iter()
+                    .filter(|(k, _)| k.as_ref() == name)
+                    .filter_map(|(_, v)| V::from_parameter_value(v.as_ref()))
+                    .next(),
+            )
         }
 
         fn to_parameter_values(&self) -> Box<[Cow<str>]> {

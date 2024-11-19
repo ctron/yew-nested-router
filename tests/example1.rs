@@ -186,6 +186,32 @@ fn test_url_parser() {
 }
 
 #[test]
+fn test_index_parser() {
+    #[derive(Target, Debug, Clone, PartialEq, Eq)]
+    pub enum Root {
+        Pages(Pages),
+    }
+    #[derive(Target, Debug, Clone, PartialEq, Eq)]
+    pub enum Pages {
+        Details {
+            app: ApplicationContext,
+            name: String,
+            #[target(nested)]
+            details: DetailsSection,
+        },
+        #[target(index)]
+        Index,
+    }
+    assert_eq!(
+        Root::parse_url(
+            "http://localhost:4200/my-ui/",
+            "http://localhost:4200/my-ui/pages",
+        ),
+        Some(Root::Pages(Pages::Index))
+    )
+}
+
+#[test]
 fn test_param_manual() {
     #[derive(Debug, Clone, PartialEq)]
     pub enum Pages {

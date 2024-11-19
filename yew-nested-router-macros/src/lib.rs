@@ -13,14 +13,16 @@ use syn::{
 };
 
 /// Get the value of the path segment
-fn to_discriminator(variant: &Variant, opts: &Opts) -> String {
+fn to_discriminator(variant: &Variant, opts: &Opts) -> Option<String> {
     if opts.index.is_present() {
-        return "".to_string();
+        return None;
     }
 
-    opts.rename
-        .clone()
-        .unwrap_or_else(|| variant.ident.to_string().to_lowercase())
+    Some(
+        opts.rename
+            .clone()
+            .unwrap_or_else(|| variant.ident.to_string().to_lowercase()),
+    )
 }
 
 #[derive(FromVariant, Default, Debug)]
@@ -252,13 +254,14 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
         let name = &v.ident;
 
         let opts = Opts::from_variant(v).expect("Unable to parse options");
-        let disc = to_discriminator(v, &opts);
+        let disc = to_discriminator(v, &opts)
+            .map(|disc| quote! {__internal_path.push(#disc.to_string().into());});
 
         match &v.fields {
             // plain route
             Fields::Unit => {
                 quote_spanned! { v.span() =>
-                    Self::#name => { __internal_path.push(#disc.to_string().into()); }
+                    Self::#name => { #disc }
                 }
             }
             // nested route
@@ -270,7 +273,7 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 
                 quote_spanned! { v.span() =>
                     Self::#name(#(#captures),*) => {
-                        __internal_path.push(#disc.into());
+                        #disc
                         #(#values)*
                     }
                 }
@@ -284,7 +287,7 @@ fn render_self(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
 
                 quote_spanned! { v.span() =>
                     Self::#name { #(#captures),* } => {
-                        __internal_path.push(#disc.into());
+                        #disc
                         #(#values)*
                     }
                 }
@@ -299,14 +302,19 @@ fn parse_path(data: &DataEnum) -> impl Iterator<Item = TokenStream> + '_ {
         let name = &v.ident;
 
         let opts = Opts::from_variant(v).expect("Unable to parse options");
-        let value = to_discriminator(v, &opts);
 
         match &v.fields {
-            Fields::Unit => {
-                quote_spanned! { v.span() =>
-                    [#value] => Some(Self::#name)
-                }
-            }
+            Fields::Unit => to_discriminator(v, &opts)
+                .map(|value| {
+                    quote_spanned! { v.span() =>
+                        [#value] => Some(Self::#name)
+                    }
+                })
+                .unwrap_or_else(|| {
+                    quote_spanned! { v.span() =>
+                        [] => Some(Self::#name)
+                    }
+                }),
             Fields::Unnamed(fields) => parse_rules(
                 v,
                 true,
@@ -403,14 +411,21 @@ where
             init.push(nested_default_initializer);
             let initializer = ctor(name, &init);
 
-            Some(quote_spanned! { v.span() =>
+            Some(disc.as_ref().map(|disc|quote_spanned! { v.span() =>
                 #[allow(unused_parens,irrefutable_let_patterns)]
                 [#disc, #(#captures, )*] => if let (#(#let_matches),*)=(#(#patterns),*) {
                     Some(#initializer)
                 }else{
                     None
                 }
-            })
+            }).unwrap_or_else(||quote_spanned! { v.span() =>
+                #[allow(unused_parens,irrefutable_let_patterns)]
+                [#(#captures, )*] => if let (#(#let_matches),*)=(#(#patterns),*) {
+                    Some(#initializer)
+                }else{
+                    None
+                }
+            }))
         } else {
             None
         };
@@ -430,15 +445,28 @@ where
     };
     let initializer = ctor(name, &init);
 
-    quote_spanned! { v.span() =>
-        #default
-        #[allow(unused_parens,irrefutable_let_patterns)]
-        [#disc, #(#captures, )*] => if let (#(#let_matches),*)=(#(#patterns),*) {
-            Some(#initializer)
-        }else{
-            None
+    disc.map(|disc| {
+        quote_spanned! { v.span() =>
+            #default
+            #[allow(unused_parens,irrefutable_let_patterns)]
+            [#disc, #(#captures, )*] => if let (#(#let_matches),*)=(#(#patterns),*) {
+                Some(#initializer)
+            }else{
+                None
+            }
         }
-    }
+    })
+    .unwrap_or_else(|| {
+        quote_spanned! { v.span() =>
+            #default
+            #[allow(unused_parens,irrefutable_let_patterns)]
+            [ #(#captures, )*] => if let (#(#let_matches),*)=(#(#patterns),*) {
+                Some(#initializer)
+            }else{
+                None
+            }
+        }
+    })
 }
 
 fn from_str_expr(cap: &Ident) -> TokenStream {

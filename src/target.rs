@@ -154,6 +154,8 @@ where
 }
 
 pub mod parameter_value {
+    use std::collections::HashSet;
+    use std::hash::Hash;
     use std::{borrow::Cow, str::FromStr};
 
     pub trait ParameterValue: Sized {
@@ -246,6 +248,22 @@ pub mod parameter_value {
                 None => Box::new([]),
                 Some(value) => Box::new([value.to_parameter_value()]),
             }
+        }
+    }
+    impl<V: SimpleParameterValue + Eq + Hash> ParameterValue for HashSet<V> {
+        fn extract_from_params(params: &[(Cow<str>, Cow<str>)], name: &str) -> Option<HashSet<V>> {
+            Some(
+                params
+                    .iter()
+                    .filter(|(k, _)| k.as_ref() == name)
+                    .filter_map(|(_, v)| V::from_parameter_value(v.as_ref()))
+                    .collect(),
+            )
+            .filter(|s: &HashSet<V>| !s.is_empty())
+        }
+
+        fn to_parameter_values(&self) -> Box<[Cow<str>]> {
+            self.iter().map(|v| v.to_parameter_value()).collect()
         }
     }
 }

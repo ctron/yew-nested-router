@@ -10,7 +10,7 @@ pub struct SectionProps {
     pub children: Children,
 }
 
-#[function_component(Section)]
+#[component(Section)]
 pub fn page(props: &SectionProps) -> Html {
     html!(
         <section>

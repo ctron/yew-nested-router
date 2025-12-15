@@ -62,7 +62,7 @@ mod default {
 }
 
 /// A link component, navigating to a [`Target`] on the `onclick` event.
-#[function_component(Link)]
+#[component(Link)]
 pub fn link<T>(props: &LinkProperties<T>) -> Html
 where
     T: Target + 'static,

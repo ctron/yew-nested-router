@@ -43,7 +43,7 @@ mod default {
 }
 
 /// A style element, allowing to add cass classes based on the target's active state.
-#[function_component(Active)]
+#[component(Active)]
 pub fn active<T>(props: &ActiveProperties<T>) -> Html
 where
     T: Target,

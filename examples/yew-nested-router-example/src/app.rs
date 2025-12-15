@@ -87,7 +87,7 @@ fn render_b(b: B) -> Html {
     }
 }
 
-#[function_component(ViewNav)]
+#[component(ViewNav)]
 pub fn view_nav() -> Html {
     html!(
         <>
@@ -102,7 +102,7 @@ pub fn view_nav() -> Html {
     )
 }
 
-#[function_component(ViewComponent)]
+#[component(ViewComponent)]
 pub fn view() -> Html {
     html!(
         <>
@@ -115,7 +115,7 @@ pub fn view() -> Html {
     )
 }
 
-#[function_component(Application)]
+#[component(Application)]
 pub fn app() -> Html {
     html!(<>
         

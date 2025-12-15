@@ -35,8 +35,8 @@
 //! # use yew_nested_router::prelude::*;
 //! # #[derive(Clone, Debug, PartialEq, Eq, Target)]
 //! # pub enum AppRoute { Index }
-//! # #[function_component(MyContent)] fn my_content() -> Html { html!() }
-//! #[function_component(MyApp)]
+//! # #[component(MyContent)] fn my_content() -> Html { html!() }
+//! #[component(MyApp)]
 //! pub fn my_app() -> Html {
 //!   html!(
 //!     <Router<AppRoute>>
@@ -62,10 +62,10 @@
 //! #   Foo,
 //! #   Bar,
 //! # }
-//! # #[function_component(Index)] fn index() -> Html { html!() }
-//! # #[function_component(Foo)] fn foo() -> Html { html!() }
-//! # #[function_component(Bar)] fn bar() -> Html { html!() }
-//! #[function_component(MyContent)]
+//! # #[component(Index)] fn index() -> Html { html!() }
+//! # #[component(Foo)] fn foo() -> Html { html!() }
+//! # #[component(Bar)] fn bar() -> Html { html!() }
+//! #[component(MyContent)]
 //! pub fn my_content() -> Html {
 //!   html!(
 //!     <Switch<AppRoute> render={|target|match target {
@@ -157,7 +157,7 @@
 //! #   Code,
 //! #   Metrics,
 //! # }
-//! #[function_component(Foo)]
+//! #[component(Foo)]
 //! pub fn foo() -> Html {
 //!   html! (
 //!     <Scope<AppRoute, Details> mapper={AppRoute::mapper_foo}>
@@ -199,12 +199,12 @@
 //! #   Code,
 //! #   Metrics,
 //! # }
-//! # #[function_component(Index)] fn index() -> Html { html!() }
-//! # #[function_component(Foo)] fn foo() -> Html { html!() }
-//! # #[function_component(Bar)] fn bar() -> Html { html!() }
+//! # #[component(Index)] fn index() -> Html { html!() }
+//! # #[component(Foo)] fn foo() -> Html { html!() }
+//! # #[component(Bar)] fn bar() -> Html { html!() }
 //! use yew_nested_router::components::Link;
 //!
-//! #[function_component(MyContent)]
+//! #[component(MyContent)]
 //! pub fn my_content() -> Html {
 //!   html!(
 //!     <>

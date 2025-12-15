@@ -17,7 +17,7 @@ where
 }
 
 /// A component two switch rendering between the different targets.
-#[function_component(Switch)]
+#[component(Switch)]
 pub fn switch<T>(props: &SwitchProps<T>) -> Html
 where
     T: Target + 'static,

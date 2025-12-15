@@ -2,7 +2,7 @@ use crate::targets::Page;
 use yew::prelude::*;
 use yew_nested_router::prelude::{use_router, Target};
 
-#[function_component(Debug)]
+#[component(Debug)]
 pub fn debug() -> Html {
     let router = use_router::<Page>();
 

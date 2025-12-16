@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use yew_nested_router::target::Target;
 use yew_nested_router::Target;
+use yew_nested_router::target::Target;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ApplicationContext {

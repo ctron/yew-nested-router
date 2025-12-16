@@ -1,4 +1,4 @@
-use crate::prelude::{use_router, Target};
+use crate::prelude::{Target, use_router};
 use crate::state::State;
 use gloo_events::{EventListener, EventListenerOptions};
 use web_sys::HtmlElement;
